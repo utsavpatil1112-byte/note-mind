@@ -1,0 +1,90 @@
+/* modals.css - Modern Modal Styles */
+
+#shortcutModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(12px);
+    z-index: 5000;
+    justify-content: center;
+    align-items: center;
+}
+
+#shortcutModal.show {
+    display: flex;
+}
+
+.modal-box {
+    background: var(--bg-secondary);
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--accent);
+}
+
+.shortcut-section {
+    margin-bottom: 24px;
+}
+
+.shortcut-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--accent);
+}
+
+.shortcut-section p {
+    margin: 8px 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+
+/* Folder Context Menu */
+
+#folderMenu {
+    display: none;
+    position: fixed;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    z-index: 3000;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+#folderMenu div {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+#folderMenu div:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}

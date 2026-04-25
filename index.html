@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not Mind - Professional Mind Mapping & Notes</title>
+    <link rel="stylesheet" href="themes.css">
+    <link rel="stylesheet" href="layout.css">
+    <link rel="stylesheet" href="editor.css">
+    <link rel="stylesheet" href="mindmaps.css">
+    <link rel="stylesheet" href="modals.css">
+    <link rel="stylesheet" href="sketch.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        if (typeof html2canvas !== 'function') {
+            console.warn('html2canvas failed to load. Export features will be disabled.');
+            window.html2canvas = function() {
+                return Promise.reject(new Error('html2canvas library unavailable'));
+            };
+        }
+    </script>
+</head>
+
+<body>
+
+    <div id="loading">Not Mind
+        <div class="loader"></div>
+    </div>
+
+    <!-- ══════════════════ MAIN APP ══════════════════ -->
+    <div id="appContainer">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo">Not Mind</h2>
+            </div>
+            <div class="sidebar-nav">
+                <button class="nav-item active" onclick="goHome()">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </button>
+                <button class="nav-item" id="favoritesBtn" onclick="showFavorites()">
+                    <span class="nav-icon">⭐</span>
+                    <span class="nav-text">Favorites</span>
+                </button>
+            </div>
+            <div class="file-explorer-section">
+                <div class="explorer-header">
+                    <span>📁 EXPLORER</span>
+                    <button id="openFolderBtn" class="explorer-action" title="Open Folder">📂</button>
+                </div>
+                <div id="fileExplorer" class="file-explorer"></div>
+            </div>
+            <div class="sidebar-search">
+                <input id="searchInput" placeholder="Search notes, mind maps..." oninput="handleSearch(this.value)">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="sidebar-settings">
+                <div class="settings-title">Theme</div>
+                <div class="theme-options">
+                    <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')">🌙 Dark</button>
+                    <button class="theme-btn" data-theme="warm" onclick="setTheme('warm')">☀️ Warm</button>
+                    <button class="theme-btn" data-theme="light" onclick="setTheme('light')">💡 Light</button>
+                </div>
+                <div class="auto-save-option">
+                    <label>
+                        <input type="checkbox" id="autoSaveToggle"> Auto Save
+                    </label>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button id="helpBtnSidebar" onclick="openHelp()" class="help-btn-sidebar">
+                    <span>ℹ️</span> About
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="content-header">
+                <div class="nav-bar">
+                    <button id="backBtn" onclick="goBack()" class="back-btn">← Back</button>
+                    <div id="breadcrumb"></div>
+                </div>
+                <div class="header-actions">
+                    <button id="addBtn" class="action-btn primary" onclick="promptNewFolder()">
+                        <span>+</span> New Folder
+                    </button>
+                    <button id="createBtn" class="action-btn" onclick="toggleCreateMenu()">
+                        <span>✏️</span> Create
+                    </button>
+                    <button class="action-btn" onclick="openScannerModal()">
+                    <span>📷</span> Scanner
+                </button>
+                </div>
+            </div>
+            <div id="folders" class="items-grid"></div>
+            <div id="createMenu" class="create-menu">
+                <div class="create-item" onclick="createItem('note')">📝 New Note</div>
+                <div class="create-item" onclick="createItem('mindmap')">🧠 New Mind Map</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ ABOUT MODAL ══════════════════ -->
+    <div id="shortcutModal">
+        <div class="modal-box">
+            <h2>ℹ️ About Not Mind</h2>
+            <button class="modal-close" onclick="closeHelp()">✕</button>
+            <div class="shortcut-section">
+                <h3>Features</h3>
+                <p>Professional mind mapping and notes application with VS Code-like file system integration.</p>
+                <p>• Open any folder from your computer</p>
+                <p>• Notes and mind maps saved as JSON files</p>
+                <p>• Auto-save support</p>
+                <p>• Multiple theme options</p>
+                <p>• Rich text editor with grid alignment</p>
+                <p>• 14 mind map structures with curved arrows</p>
+                <p>• Insert images, hyperlinks, notes, sketches, PDFs into mind map nodes</p>
+                <p>• Enhanced sketch pad: pen, marker, shapes, text, undo</p>
+                <p>• Hyperlinks in notes (Ctrl+K)</p>
+                <p>• Sketch directly in notes</p>
+                <p>• New page support in notes</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ ENHANCED SKETCH MODAL ══════════════════ -->
+    <div id="sketchModal" class="sketch-modal">
+        <div class="sketch-modal-content">
+            <div class="sketch-header">
+                <span>✏️ Sketch Pad</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="sketch-close" onclick="undoSketch()" title="Undo (Ctrl+Z)">↺ Undo</button>
+                    <button class="sketch-close" onclick="redoSketch()" title="Redo (Ctrl+Y)">↻ Redo</button>
+                    <button class="sketch-close" onclick="newSketchPage()" title="Create New Page">📑 New Page</button>
+                    <button class="sketch-close" onclick="openGenerateModal('sketch')" title="Generate link and QR">🔗 Generate</button>
+                    <button class="sketch-close" onclick="exportSketchAsImage()" title="Export image">📸 Export</button>
+                    <button class="sketch-close" onclick="clearSketch()">🗑️ Clear</button>
+                    <button class="sketch-close" onclick="closeSketch()">✕</button>
+                </div>
+            </div>
+            <div id="sketchPageTabs" class="note-page-tabs"></div>
+            <div class="sketch-toolbar">
+                <!-- Pen Tools -->
+                <div class="sketch-tool-group">
+                    <span class="sketch-tool-label">DRAW</span>
+                    <button class="sketch-tool active" data-tool="pen" onclick="setSketchTool('pen')" title="Pen">🖊️ Pen</button>
+                    <button class="sketch-tool" data-tool="marker" onclick="setSketchTool('marker')" title="Marker">🖌️ Marker</button>
+                    <button class="sketch-tool" data-tool="brush" onclick="setSketchTool('brush')" title="Brush">🎨 Brush</button>
+                    <button class="sketch-tool" data-tool="eraser" onclick="setSketchTool('eraser')" title="Eraser">🧽 Eraser</button>
+                </div>
+                <!-- Shape Tools -->
+                <div class="sketch-tool-group">
+                    <span class="sketch-tool-label">SHAPES</span>
+                    <select id="shapePresetSelect" onchange="setShapeFromPreset(this.value)" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);">
+                        <option value="">Select 2D/3D Shape</option>
+                        <optgroup label="2D Shapes">
+                            <option value="triangle">Triangle</option>
+                            <option value="square">Square</option>
+                            <option value="rect">Rectangle</option>
+                            <option value="circle">Circle</option>
+                            <option value="pentagon">Pentagon</option>
+                            <option value="hexagon">Hexagon</option>
+                        </optgroup>
+                        <optgroup label="3D Shapes">
+                            <option value="cube">Cube</option>
+                            <option value="cuboid">Cuboid</option>
+                            <option value="sphere">Sphere</option>
+                            <option value="cylinder">Cylinder</option>
+                            <option value="cone">Cone</option>
+                            <option value="pyramid">Pyramid</option>
+                        </optgroup>
+                    </select>
+                    <button class="sketch-shape" data-shape="line" onclick="setSketchShape('line')">╱ Line</button>
+                    <button class="sketch-shape" data-shape="arrow" onclick="setSketchShape('arrow')">→ Arrow</button>
+                    <button class="sketch-shape" data-shape="dbarrow" onclick="setSketchShape('dbarrow')">↔ D.Arrow</button>
+                    <button class="sketch-shape" data-shape="rect" onclick="setSketchShape('rect')">⬛ Rect</button>
+                    <button class="sketch-shape" data-shape="circle" onclick="setSketchShape('circle')">● Circle</button>
+                    <button class="sketch-shape" data-shape="triangle" onclick="setSketchShape('triangle')">▲ Triangle</button>
+                    <button class="sketch-shape" data-shape="diamond" onclick="setSketchShape('diamond')">◆ Diamond</button>
+                </div>
+                <!-- Text Tool -->
+                <div class="sketch-tool-group">
+                    <span class="sketch-tool-label">TEXT</span>
+                    <button class="sketch-tool" data-tool="text" onclick="setSketchTool('text')">T Text</button>
+                    <button class="sketch-tool" data-tool="select" onclick="setSketchTool('select')">⬚ Select</button>
+                    <select id="sketchFontSize" onchange="setSketchFontSize(this.value)" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);">
+                        <option value="14">14px</option>
+                        <option value="18">18px</option>
+                        <option value="24" selected>24px</option>
+                        <option value="32">32px</option>
+                        <option value="48">48px</option>
+                    </select>
+                </div>
+                <!-- Colors -->
+                <div class="sketch-tool-group">
+                    <span class="sketch-tool-label">COLOR</span>
+                    <input type="color" id="sketchStrokeColor" value="#3b82f6" onchange="setSketchStrokeColor(this.value)" title="Stroke Color">
+                    <input type="color" id="sketchFillColor" value="#3b82f680" onchange="setSketchFillColor(this.value)" title="Fill Color">
+                    <label style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:4px;">
+                        <input type="checkbox" id="sketchFillToggle" onchange="setSketchFillMode(this.checked)"> Fill
+                    </label>
+                </div>
+                <!-- Size -->
+                <div class="sketch-tool-group">
+                    <span class="sketch-tool-label">SIZE</span>
+                    <input type="range" id="sketchSize" min="1" max="30" value="3" oninput="setSketchSize(this.value)" style="width:90px;">
+                    <span id="sizeValue" style="font-size:12px;min-width:30px;">3px</span>
+                </div>
+                <!-- Save -->
+                <div class="sketch-tool-group" style="margin-left:auto;">
+                    <button class="sketch-shape" onclick="toggleSketchInsertMenu(event)">📎 Insert ▼</button>
+                    <button class="sketch-shape active-save" onclick="saveSketch()">💾 Save Sketch</button>
+                    <button onclick="cancelSketch()">Cancel</button>
+                </div>
+            </div>
+            <!-- Canvas container with text input overlay -->
+            <div style="position:relative;display:inline-block;overflow:auto;max-width:100%;">
+                <canvas id="sketchCanvas" width="860" height="520"></canvas>
+                <div id="sketchGuideX" style="display:none;position:absolute;top:0;bottom:0;width:1px;background:rgba(59,130,246,0.6);pointer-events:none;"></div>
+                <div id="sketchGuideY" style="display:none;position:absolute;left:0;right:0;height:1px;background:rgba(59,130,246,0.6);pointer-events:none;"></div>
+                <input id="sketchTextInput" type="text" placeholder="Type and press Enter" style="display:none;position:absolute;background:transparent;border:1px dashed var(--accent);color:inherit;font-size:24px;padding:2px 4px;outline:none;min-width:120px;z-index:10;">
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ NOTE DASHBOARD ══════════════════ -->
+    <div id="noteDashboard">
+        <div class="note-topbar">
+            <button onclick="closeNote()" title="Back">← Back</button>
+            <span id="noteName">Note</span>
+            <div class="note-actions">
+                <button onclick="saveNote()" id="saveNoteBtn" title="Save">💾 Save</button>
+                <button onclick="saveNoteAs()" id="saveNoteAsBtn" title="Save As">📄 Save As</button>
+                <button onclick="exportNoteAsImage()" id="exportNoteImgBtn" title="Export as Image">📸 Export</button>
+            </div>
+        </div>
+        <div class="note-toolbar">
+            <button onclick="execCmd('undo')" id="undoBtn" title="Undo">↺</button>
+            <button onclick="execCmd('redo')" id="redoBtn" title="Redo">↻</button>
+            <button onclick="execCmd('bold')" id="boldBtn" title="Bold"><b>B</b></button>
+            <button onclick="execCmd('italic')" id="italicBtn" title="Italic"><i>I</i></button>
+            <button onclick="execCmd('underline')" id="underlineBtn" title="Underline"><u>U</u></button>
+
+            <select id="fontFamilySelect" onchange="setFontFamily(this.value)" title="Font Family">
+                <option value="'Segoe UI', 'Inter', system-ui, sans-serif">Default</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+            </select>
+
+            <select id="headingSelect" onchange="setHeading(this.value)">
+                <option value="P">Normal</option>
+                <option value="H1">Heading 1</option>
+                <option value="H2">Heading 2</option>
+                <option value="H3">Heading 3</option>
+            </select>
+
+            <select id="bulletStyleSelect" onchange="setList(this.value)" title="Bullet Style">
+                <option value="default">• Default</option>
+                <option value="disc">• Disc</option>
+                <option value="circle">○ Circle</option>
+                <option value="square">■ Square</option>
+                <option value="decimal">1. Decimal</option>
+                <option value="lower-roman">i. Lower Roman</option>
+                <option value="upper-roman">I. Upper Roman</option>
+                <option value="lower-alpha">a. Lower Alpha</option>
+                <option value="upper-alpha">A. Upper Alpha</option>
+            </select>
+
+            <button onclick="execCmd('justifyLeft')">⬅</button>
+            <button onclick="execCmd('justifyLeft')" title="Align Left">Left</button>
+            <button onclick="execCmd('justifyCenter')" title="Align Center">Center</button>
+            <button onclick="execCmd('justifyRight')" title="Align Right">Right</button>
+            <button onclick="execCmd('justifyFull')" title="Justify">Justify</button>
+            <button onclick="execCmd('indent')" title="Indent">Indent</button>
+            <button onclick="execCmd('outdent')" title="Outdent">Outdent</button>
+            <input type="number" id="fontSizeInput" min="10" max="72" value="16" onchange="setSize(this.value)" style="width:54px;" title="Font size">
+            <input type="color" id="colorPicker" onchange="setColor(this.value)" title="Text color">
+            <button id="gridToggleBtn" class="grid-on" onclick="toggleGrid()" title="Toggle Grid">⊞ Grid</button>
+
+            <!-- NEW: Note specific tools -->
+            <button onclick="insertNoteHyperlink()" title="Insert Hyperlink (Ctrl+K)">🔗 Link</button>
+            <button onclick="openSketchForNote()" title="Insert Sketch">✏️ Sketch</button>
+            <button onclick="addNewNotePage()" title="Insert New Page">📄 Page Break</button>
+            <button onclick="createNotePage()" title="Create New Page">📑 New Page</button>
+            <button onclick="openGenerateModal('note')" title="Generate share link and QR">🔗 Generate</button>
+
+            <span style="margin-left: auto; display: flex; gap: 5px; align-items:center;">
+                <button onclick="zoomNoteOut()" title="Zoom Out">🔍-</button>
+                <span id="noteZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
+            <button onclick="zoomNoteIn()" title="Zoom In">🔍+</button>
+            <button onclick="resetNoteZoom()" title="Reset Zoom">⟳</button>
+            </span>
+        </div>
+        <div class="container">
+            <div id="lineNumbers"></div>
+            <div id="lineEditor" contenteditable="true">
+                <div><br></div>
+            </div>
+        </div>
+        <div id="notePageTabs" class="note-page-tabs"></div>
+    </div>
+
+    <!-- ══════════════════ MIND MAP DASHBOARD ══════════════════ -->
+    <div id="mindMapDashboard">
+        <div class="mindmap-topbar">
+            <button onclick="closeMindMap()" title="Back">←</button>
+            <span id="mindMapName">Mind Map</span>
+            <div class="structure-controls">
+                <div class="structure-selector">
+                    <button id="structureBtn" class="structure-btn" onclick="toggleStructureMenu()">
+                        <span id="selectedStructureIcon">🔘</span> <span id="selectedStructureName">Radial</span> ▼
+                    </button>
+                    <div id="structureMenu" class="structure-menu">
+                        <div class="menu-sep">Classic</div>
+                        <div data-structure="radial" onclick="applyStructure('radial')">🔘 Radial (Centre out)</div>
+                        <div data-structure="bubble" onclick="applyStructure('bubble')">💭 Bubble Map</div>
+                        <div data-structure="hierarchy" onclick="applyStructure('hierarchy')">📊 Hierarchy</div>
+                        <div class="menu-sep">Directional</div>
+                        <div data-structure="twoway" onclick="applyStructure('twoway')">↔️ Two-Way Mind Map</div>
+                        <div data-structure="oneway" onclick="applyStructure('oneway')">➡️ One-Way Mind Map</div>
+                        <div data-structure="fourway" onclick="applyStructure('fourway')">🔄 Four Way (N/E/S/W)</div>
+                        <div data-structure="tree" onclick="applyStructure('tree')">🌳 Tree (Left → Right)</div>
+                        <div data-structure="treechart" onclick="applyStructure('treechart')">🌲 Tree Chart (Top ↓)</div>
+                        <div data-structure="brace" onclick="applyStructure('brace')">🔗 Brace Map</div>
+                        <div class="menu-sep">Structural</div>
+                        <div data-structure="orgchart" onclick="applyStructure('orgchart')">🏢 Organization Chart</div>
+                        <div data-structure="fishbone" onclick="applyStructure('fishbone')">🐟 Fishbone</div>
+                        <div data-structure="timeline" onclick="applyStructure('timeline')">📅 Timeline</div>
+                        <div class="menu-sep">Data &amp; Visual</div>
+                        <div data-structure="divergence" onclick="applyStructure('divergence')">⭕ Centre Divergence</div>
+                        <div data-structure="matrix" onclick="applyStructure('matrix')">📋 Matrix</div>
+                        <div class="menu-sep">Canvas</div>
+                        <div data-structure="free" onclick="applyStructure('free')">✋ Free Layout</div>
+                    </div>
+                </div>
+                <button onclick="addSubNodeToSelected()" title="Add Sub-node to selected node">➕ Sub Node</button>
+                <button id="insertBtn" onclick="toggleInsertMenu()" title="Insert into selected node">📎 Insert ▼</button>
+                <button onclick="zoomMindMapOut()" title="Zoom Out">🔍-</button>
+                <span id="mindMapZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
+                <button onclick="zoomMindMapIn()" title="Zoom In">🔍+</button>
+                <button onclick="resetMindMapZoom()" title="Reset Zoom">⟳</button>
+                <button onclick="saveMindMap()">💾 Save</button>
+                <button onclick="saveMindMapAs()">📄 Save As</button>
+                <button onclick="addMindMapNode()">➕ Add Node</button>
+                <button onclick="deleteSelectedNode()">🗑 Delete</button>
+                <button onclick="resetMindMapView()">🔄 Reset</button>
+                <button onclick="exportMindMap()">📸 Export</button>
+                <button onclick="openGenerateModal('mindmap')">🔗 Generate</button>
+            </div>
+        </div>
+        <div class="mindmap-canvas" id="mindMapCanvasContainer">
+            <div id="mindMapCanvas" style="position:relative;width:3000px;height:3000px;">
+                <div class="mindmap-center-node" id="mindMapCenterNode" contenteditable="true">Main Idea</div>
+                <div id="mindMapNodes"></div>
+                <svg id="mindMapLines" style="position:absolute;top:0;left:0;width:3000px;height:3000px;pointer-events:none;z-index:2;overflow:visible;"></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ INSERT MENU (Mind Map) ══════════════════ -->
+    <div id="insertMenu" class="insert-menu">
+        <div class="insert-item" onclick="insertPhoto()">🖼️ Photo</div>
+        <div class="insert-item" onclick="insertHyperlink()">🔗 Hyperlink</div>
+        <div class="insert-item" onclick="insertNoteComment()">💬 Note/Comment</div>
+        <div class="insert-item" onclick="openSketchInsert()">✏️ Sketch</div>
+        <div class="insert-item" onclick="insertAudio()">🎵 Audio</div>
+        <div class="insert-item" onclick="insertPDF()">📄 PDF</div>
+    </div>
+    <div id="sketchInsertMenu" class="insert-menu">
+        <div class="insert-item" onclick="insertSketchImage()">🖼️ Image</div>
+        <div class="insert-item" onclick="insertSketchAudio()">🎵 Audio</div>
+    </div>
+
+    <!-- ══════════════════ HYPERLINK MODAL (Mind Map) ══════════════════ -->
+    <div id="hyperlinkModal" class="hyperlink-modal">
+        <div class="modal-box small">
+            <h3>🔗 Insert Hyperlink to Node</h3>
+            <button class="modal-close" onclick="closeHyperlinkModal()">✕</button>
+            <label style="color:var(--text-secondary);font-size:13px;">External URL:</label>
+            <input type="text" id="hyperlinkUrl" placeholder="https://example.com" style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+            <label style="color:var(--text-secondary);font-size:13px;">Or link to internal file:</label>
+            <select id="internalFileSelect" style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+                <option value="">-- Select internal note/mind map --</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:13px;margin:0 0 12px;">
+                <input type="checkbox" id="nodeHyperlinkOpenBoth">
+                Open in current tab and new tab
+            </label>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="closeHyperlinkModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Cancel</button>
+                <button onclick="confirmHyperlink()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Insert</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ HYPERLINK MODAL (Note) ══════════════════ -->
+    <div id="noteHyperlinkModal" class="hyperlink-modal">
+        <div class="modal-box small">
+            <h3>🔗 Insert Hyperlink</h3>
+            <button class="modal-close" onclick="closeNoteHyperlinkModal()">✕</button>
+            <label style="color:var(--text-secondary);font-size:13px;">Link text (optional):</label>
+            <input type="text" id="noteLinkText" placeholder="Link text (leave blank to use URL)" style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+            <label style="color:var(--text-secondary);font-size:13px;">URL:</label>
+            <input type="text" id="noteLinkUrl" placeholder="https://example.com" style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+            <label style="color:var(--text-secondary);font-size:13px;">Or link to internal file:</label>
+            <select id="noteInternalFileSelect" style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+                <option value="">-- Select internal note/mind map --</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:13px;margin:0 0 12px;">
+                <input type="checkbox" id="noteHyperlinkOpenBoth">
+                Open in current tab and new tab
+            </label>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="closeNoteHyperlinkModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Cancel</button>
+                <button onclick="confirmNoteHyperlink()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Insert</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="generateModal" class="hyperlink-modal">
+        <div class="modal-box small">
+            <h3>🔗 Generate Link & QR</h3>
+            <button class="modal-close" onclick="closeGenerateModal()">✕</button>
+            <label style="color:var(--text-secondary);font-size:13px;">Share Link:</label>
+            <input type="text" id="generatedShareLink" readonly style="width:100%;padding:10px;margin:6px 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+            <div id="generatedQrPreview" style="display:flex;align-items:center;justify-content:center;height:150px;border:1px dashed var(--border);border-radius:10px;background:var(--bg-tertiary);margin-bottom:12px;">
+                <span style="color:var(--text-muted);font-size:12px;">QR preview</span>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="openGeneratedLink()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Open Link</button>
+                <button onclick="copyGeneratedLink()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Copy</button>
+                <button onclick="closeGenerateModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scannerModal" class="hyperlink-modal">
+        <div class="modal-box small">
+            <h3>📷 Scanner</h3>
+            <button class="modal-close" onclick="closeScannerModal()">✕</button>
+            <video id="scannerVideo" autoplay playsinline muted style="width:100%;border-radius:10px;border:1px solid var(--border);background:#000;margin:6px 0 12px;"></video>
+            <input type="text" id="scannerManualInput" placeholder="Paste scanned link here" style="width:100%;padding:10px;margin:0 0 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                <button onclick="submitScannerManualInput()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Open Link</button>
+                <button onclick="closeScannerModal()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ FOLDER CONTEXT MENU ══════════════════ -->
+    <div id="folderMenu">
+        <div onclick="renameFolder()">✏️ Rename</div>
+        <div onclick="deleteFolder()">🗑️ Delete</div>
+        <div onclick="addToFavorites()">⭐ Add to Favorites</div>
+    </div>
+
+    <script src="core.js"></script>
+    <script src="filesystem.js"></script>
+    <script src="editor.js"></script>
+    <script src="mindmaps.js"></script>
+    <script src="sketch.js"></script>
+    <script src="ui.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,461 @@
+/* mindmaps.css - Mind Map Styles — 14 layout types */
+
+#mindMapDashboard {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 2000;
+}
+
+.mindmap-topbar {
+    height: 65px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.mindmap-topbar button {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.mindmap-topbar button:hover {
+    background: var(--accent);
+    color: white;
+    transform: translateY(-2px);
+}
+
+#mindMapName {
+    font-size: 18px;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    color: var(--accent);
+}
+
+.structure-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.structure-selector {
+    position: relative;
+}
+
+.structure-btn {
+    background: var(--accent) !important;
+    color: white !important;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.structure-menu {
+    display: none;
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    min-width: 230px;
+    z-index: 1000;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    /* Allow menu to scroll if many items */
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.structure-menu.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.structure-menu div {
+    padding: 11px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.structure-menu div:last-child {
+    border-bottom: none;
+}
+
+.structure-menu div:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+
+/* Category separators inside the menu */
+
+.structure-menu .menu-sep {
+    padding: 6px 16px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    cursor: default;
+    border-bottom: 1px solid var(--border);
+}
+
+.structure-menu .menu-sep:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ── Canvas ─────────────────────────────────────────────────────────────────── */
+
+.mindmap-canvas {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 30px 30px;
+}
+
+
+/* ── Centre node ─────────────────────────────────────────────────────────────── */
+
+.mindmap-center-node {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    padding: 14px 28px;
+    border-radius: 40px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: move;
+    z-index: 12;
+    white-space: nowrap;
+    outline: none;
+    color: white;
+    text-align: center;
+    min-width: 140px;
+    transition: box-shadow 0.3s ease;
+}
+
+.mindmap-center-node:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+
+/* ── Regular nodes ───────────────────────────────────────────────────────────── */
+
+.mindmap-node {
+    position: absolute;
+    background: var(--card-bg);
+    padding: 10px 20px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-sm);
+    font-size: 14px;
+    cursor: move;
+    white-space: nowrap;
+    z-index: 10;
+    outline: none;
+    min-width: 100px;
+    text-align: center;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    color: var(--text-primary);
+}
+
+.mindmap-node:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.mindmap-node.selected {
+    border: 2px solid var(--accent);
+    background: var(--accent-light);
+}
+
+.mindmap-node.subnode {
+    font-size: 12px;
+    padding: 6px 14px;
+    min-width: 80px;
+    background: var(--bg-tertiary);
+}
+
+
+/* ── Lines ───────────────────────────────────────────────────────────────────── */
+
+.mindmap-line {
+    position: absolute;
+    height: 2px;
+    transform-origin: left center;
+    pointer-events: none;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+}
+
+#mindMapLines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3000px;
+    height: 3000px;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+}
+
+
+/* ── Hierarchy turning points ────────────────────────────────────────────────── */
+
+.turning-point {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 6;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   NEW LAYOUT STYLES
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── Divergence: circular nodes ──────────────────────────────────────────────── */
+
+.mindmap-node.circle-node {
+    border-radius: 50% !important;
+    width: 90px !important;
+    height: 90px !important;
+    min-width: 90px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: normal !important;
+    word-break: break-word;
+    font-size: 12px !important;
+    line-height: 1.3;
+    text-align: center;
+    border-left: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.mindmap-node.circle-node.selected {
+    box-shadow: 0 0 0 3px var(--accent-light), 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mindmap-node.circle-node.subnode {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px !important;
+    font-size: 10px !important;
+}
+
+
+/* ── Timeline: horizontal baseline ──────────────────────────────────────────── */
+
+.timeline-baseline {
+    position: absolute;
+    left: 80px;
+    right: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent) 6%, var(--accent) 94%, transparent);
+    border-radius: 3px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.timeline-baseline::before,
+.timeline-baseline::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.timeline-baseline::before {
+    left: 0;
+}
+
+.timeline-baseline::after {
+    right: 0;
+}
+
+
+/* ── Matrix: table layout ────────────────────────────────────────────────────── */
+
+.mindmap-matrix-table {
+    border-collapse: collapse;
+    font-family: inherit;
+    z-index: 8;
+    box-shadow: var(--shadow);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mindmap-matrix-table th {
+    background: var(--accent);
+    color: white;
+    padding: 13px 20px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: none;
+}
+
+.mindmap-matrix-table td {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    min-width: 150px;
+    max-width: 220px;
+    cursor: pointer;
+    transition: background 0.18s;
+    font-size: 14px;
+    vertical-align: top;
+    outline: none;
+}
+
+.mindmap-matrix-table td:focus {
+    background: var(--accent-light) !important;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+
+/* First column of every data row: slightly bolder label style */
+
+.mindmap-matrix-table tr:not(:first-child) td:first-child {
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    color: var(--accent);
+}
+
+
+/* ── Brace map: accent the stacked nodes group box ──────────────────────────── */
+
+.brace-group-highlight {
+    position: absolute;
+    border: 1.5px dashed var(--accent);
+    border-radius: 10px;
+    pointer-events: none;
+    opacity: 0.3;
+    z-index: 3;
+}
+
+
+/* ── Org / Tree chart: subtle depth shading ──────────────────────────────────── */
+
+#mindMapNodes .mindmap-node[data-depth="2"] {
+    font-size: 13px;
+    opacity: 0.92;
+}
+
+
+/* ── Free layout: drag hint on hover ────────────────────────────────────────── */
+
+body[data-structure="free"] .mindmap-node::after {
+    content: '✥';
+    position: absolute;
+    top: -10px;
+    right: -6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+body[data-structure="free"] .mindmap-node:hover::after {
+    opacity: 1;
+}
+
+/* Add to mindmaps.css - Four Way specific styles */
+
+/* Four Way structure - center node as circle */
+body[data-structure="fourway"] .mindmap-center-node {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 14px;
+    white-space: normal;
+    word-break: break-word;
+    padding: 12px;
+}
+
+/* Four Way structure - directional node styling */
+body[data-structure="fourway"] .mindmap-node {
+    min-width: 100px;
+    text-align: center;
+    font-weight: 600;
+    border-left: 4px solid var(--accent);
+}
+
+body[data-structure="fourway"] .mindmap-node[data-direction="north"] {
+    border-left-color: #ef4444;
+}
+
+body[data-structure="fourway"] .mindmap-node[data-direction="east"] {
+    border-left-color: #10b981;
+}
+
+body[data-structure="fourway"] .mindmap-node[data-direction="south"] {
+    border-left-color: #f59e0b;
+}
+
+body[data-structure="fourway"] .mindmap-node[data-direction="west"] {
+    border-left-color: #8b5cf6;
+}
