@@ -544,10 +544,14 @@ function openSketch() {
     var modal = document.getElementById('sketchModal');
     if (!modal) { console.error('Sketch modal not found'); return; }
     modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
 
     setTimeout(function() {
         sketchCanvas = document.getElementById('sketchCanvas');
         if (!sketchCanvas) return;
+        var container = sketchCanvas.parentElement;
+        sketchCanvas.width = container.clientWidth;
+        sketchCanvas.height = container.clientHeight;
         sketchCtx = sketchCanvas.getContext('2d');
         sketchCtx.fillStyle = 'white';
         sketchCtx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
@@ -581,6 +585,7 @@ function closeSketch() {
     commitTextToCanvas();
     var modal = document.getElementById('sketchModal');
     if (modal) modal.classList.remove('show');
+    document.body.style.overflow = 'auto';
     currentSketchCallback = null;
     previewImageData = null;
 }

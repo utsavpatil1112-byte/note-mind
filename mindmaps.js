@@ -457,6 +457,7 @@ function openMindMap(mindMap) {
     var dashboard    = document.getElementById("mindMapDashboard");
     if (appContainer) appContainer.style.display = "none";
     if (dashboard)    dashboard.style.display    = "flex";
+    document.body.style.overflow = 'hidden';
 
     mindMapZoomLevel = 1;
 
@@ -549,6 +550,7 @@ function closeMindMap() {
     var appContainer = document.getElementById("appContainer");
     if (dashboard)    dashboard.style.display    = "none";
     if (appContainer) appContainer.style.display = "flex";
+    document.body.style.overflow = 'auto';
     render();
 }
 

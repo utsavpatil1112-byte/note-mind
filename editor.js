@@ -635,6 +635,7 @@ function openNoteObj(n) {
     applyGridStyle();
     document.getElementById("appContainer").style.display = "none";
     document.getElementById("noteDashboard").style.display = "flex";
+    document.body.style.overflow = 'hidden';
     noteZoomLevel = 1;
     applyNoteZoom();
     setTimeout(function() {
@@ -658,6 +659,7 @@ function closeNote() {
     }
     document.getElementById("noteDashboard").style.display = "none";
     document.getElementById("appContainer").style.display = "flex";
+    document.body.style.overflow = 'auto';
     render();
 }
 
