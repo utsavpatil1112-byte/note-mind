@@ -1,5 +1,12 @@
 // ui.js - UI functionality for Not Mind Application
 
+function toggleSidebar() {
+    var sidebar = document.querySelector('.sidebar');
+    var appContainer = document.getElementById('appContainer');
+    sidebar.classList.toggle('open');
+    appContainer.classList.toggle('sidebar-open');
+}
+
 async function promptNewFolder() {
     if (!currentWorkspaceRoot) {
         alert("Please open a folder first using the 📂 button in explorer");
