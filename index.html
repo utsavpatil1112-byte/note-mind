@@ -291,12 +291,15 @@
             <button onclick="createNotePage()" title="Create New Page">📑 New Page</button>
             <button onclick="openGenerateModal('note')" title="Generate share link and QR">🔗 Generate</button>
 
-            <span style="margin-left: auto; display: flex; gap: 5px; align-items:center;">
-                <button onclick="zoomNoteOut()" title="Zoom Out">🔍-</button>
-                <span id="noteZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
-            <button onclick="zoomNoteIn()" title="Zoom In">🔍+</button>
-            <button onclick="resetNoteZoom()" title="Reset Zoom">⟳</button>
-            </span>
+            <div class="more-menu-container">
+                <button id="noteMoreBtn" onclick="toggleNoteMoreMenu()" title="More options">⋯</button>
+                <div id="noteMoreMenu" class="more-menu">
+                    <button onclick="zoomNoteOut()" title="Zoom Out">🔍-</button>
+                    <span id="noteZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
+                    <button onclick="zoomNoteIn()" title="Zoom In">🔍+</button>
+                    <button onclick="resetNoteZoom()" title="Reset Zoom">⟳</button>
+                </div>
+            </div>
         </div>
         <div class="container">
             <div id="lineNumbers"></div>
@@ -350,9 +353,20 @@
                 <button onclick="saveMindMapAs()">📄 Save As</button>
                 <button onclick="addMindMapNode()">➕ Add Node</button>
                 <button onclick="deleteSelectedNode()">🗑 Delete</button>
-                <button onclick="resetMindMapView()">🔄 Reset</button>
-                <button onclick="exportMindMap()">📸 Export</button>
-                <button onclick="openGenerateModal('mindmap')">🔗 Generate</button>
+                <button onclick="saveMindMap()">💾 Save</button>
+                <button onclick="saveMindMapAs()">📄 Save As</button>
+                <div class="more-menu-container">
+                    <button id="mindmapMoreBtn" onclick="toggleMindmapMoreMenu()" title="More options">⋯</button>
+                    <div id="mindmapMoreMenu" class="more-menu">
+                        <button onclick="zoomMindMapOut()" title="Zoom Out">🔍-</button>
+                        <span id="mindMapZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
+                        <button onclick="zoomMindMapIn()" title="Zoom In">🔍+</button>
+                        <button onclick="resetMindMapZoom()" title="Reset Zoom">⟳</button>
+                        <button onclick="resetMindMapView()">🔄 Reset</button>
+                        <button onclick="exportMindMap()">📸 Export</button>
+                        <button onclick="openGenerateModal('mindmap')">🔗 Generate</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="mindmap-canvas" id="mindMapCanvasContainer">

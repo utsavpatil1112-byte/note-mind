@@ -28,6 +28,16 @@ function toggleCreateMenu() {
     menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
+function toggleNoteMoreMenu() {
+    var menu = document.getElementById("noteMoreMenu");
+    menu.classList.toggle('show');
+}
+
+function toggleMindmapMoreMenu() {
+    var menu = document.getElementById("mindmapMoreMenu");
+    menu.classList.toggle('show');
+}
+
 document.addEventListener('click', function(e) {
     var createMenu = document.getElementById("createMenu");
     var folderMenuEl = document.getElementById("folderMenu");
@@ -44,6 +54,18 @@ document.addEventListener('click', function(e) {
 
     if (structureMenu && structureBtn && !structureMenu.contains(e.target) && e.target !== structureBtn && !structureBtn.contains(e.target)) {
         structureMenu.classList.remove('show');
+    }
+
+    var noteMoreMenu = document.getElementById('noteMoreMenu');
+    var noteMoreBtn = document.getElementById('noteMoreBtn');
+    if (noteMoreMenu && noteMoreBtn && !noteMoreMenu.contains(e.target) && e.target !== noteMoreBtn) {
+        noteMoreMenu.classList.remove('show');
+    }
+
+    var mindmapMoreMenu = document.getElementById('mindmapMoreMenu');
+    var mindmapMoreBtn = document.getElementById('mindmapMoreBtn');
+    if (mindmapMoreMenu && mindmapMoreBtn && !mindmapMoreMenu.contains(e.target) && e.target !== mindmapMoreBtn) {
+        mindmapMoreMenu.classList.remove('show');
     }
 
     var sketchInsertMenu = document.getElementById('sketchInsertMenu');

@@ -459,3 +459,61 @@ body[data-structure="fourway"] .mindmap-node[data-direction="south"] {
 body[data-structure="fourway"] .mindmap-node[data-direction="west"] {
     border-left-color: #8b5cf6;
 }
+
+/* Responsive design for mind maps */
+@media (max-width: 768px) {
+    .mindmap-topbar {
+        padding: 8px 16px;
+        height: auto;
+        flex-wrap: wrap;
+    }
+
+    .mindmap-topbar button {
+        padding: 8px 12px;
+        font-size: 14px;
+        margin-left: 4px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .structure-controls {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    #mindMapName {
+        font-size: 16px;
+        order: -1;
+        flex-basis: 100%;
+        text-align: left;
+        margin-bottom: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .structure-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+    .mindmap-topbar button {
+        flex: 1;
+        min-width: auto;
+    }
+
+    .structure-btn {
+        justify-content: center;
+    }
+
+    .more-menu {
+        position: static;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+        padding: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}
