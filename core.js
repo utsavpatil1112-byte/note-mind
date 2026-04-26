@@ -202,4 +202,4 @@ function normalizeExternalUrl(url) {
 // Initialization
 loadTheme();
 loadDataFromLocalStorage();
-initAutoSave();
+initAutoSave(); 

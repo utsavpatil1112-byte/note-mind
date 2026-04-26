@@ -1,97 +1,101 @@
-/* sketch.css - Enhanced Sketch Pad Styles */
+/* sketch.css - Fully Responsive Sketch Pad Styles */
 
 .sketch-modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0,0,0,0.85);
     backdrop-filter: blur(10px);
     z-index: 6000;
     justify-content: center;
     align-items: center;
 }
-
-.sketch-modal.show {
-    display: flex;
-}
+.sketch-modal.show { display: flex; }
 
 .sketch-modal-content {
     background: var(--bg-secondary);
-    border-radius: 20px;
-    padding: 20px;
     width: 100vw;
     height: 100vh;
-    max-width: 100vw;
-    border-radius: 0;
-    box-shadow: var(--shadow);
+    height: 100dvh;
+    padding: 14px;
     border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    overflow: hidden;
 }
 
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .sketch-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
-    font-size: 18px;
+    font-size: 16px;
     color: var(--accent);
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
 }
-
+.sketch-header-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
 .sketch-close {
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 6px 14px;
+    padding: 6px 12px;
     cursor: pointer;
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 12px;
     transition: all 0.2s;
+    white-space: nowrap;
+    min-height: var(--touch-target);
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
+.sketch-close:hover { background: var(--accent); color: white; border-color: var(--accent); }
 
-.sketch-close:hover {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-}
-
-
-/* Toolbar */
-
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
 .sketch-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
     align-items: center;
-    padding: 8px 0;
+    padding: 6px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 0;
 }
+.sketch-toolbar::-webkit-scrollbar { display: none; }
 
 .sketch-tool-group {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 10px;
+    gap: 4px;
+    padding: 5px 8px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--bg-tertiary);
+    flex-shrink: 0;
 }
-
 .sketch-tool-label {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     letter-spacing: 1px;
     color: var(--text-muted);
     text-transform: uppercase;
-    margin-right: 4px;
+    margin-right: 2px;
     white-space: nowrap;
 }
-
-.sketch-tool,
-.sketch-shape {
-    padding: 6px 12px;
+.sketch-tool, .sketch-shape {
+    padding: 5px 10px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: 8px;
@@ -100,61 +104,69 @@
     transition: all 0.2s;
     color: var(--text-primary);
     white-space: nowrap;
+    min-height: var(--touch-target);
+    display: flex;
+    align-items: center;
+    gap: 3px;
 }
-
-.sketch-tool:hover,
-.sketch-shape:hover {
-    background: var(--accent-light);
-    color: var(--accent);
-    border-color: var(--accent);
-}
-
-.sketch-tool.active,
-.sketch-shape.active {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-}
-
+.sketch-tool:hover, .sketch-shape:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.sketch-tool.active, .sketch-shape.active { background: var(--accent); color: white; border-color: var(--accent); }
 .active-save {
     background: var(--accent) !important;
     color: white !important;
     border-color: var(--accent) !important;
     font-weight: 600;
-    padding: 8px 16px !important;
+    padding: 6px 14px !important;
 }
 
-
 /* Color inputs */
-
-#sketchStrokeColor,
-#sketchFillColor {
-    width: 36px;
-    height: 32px;
+#sketchStrokeColor, #sketchFillColor {
+    width: 34px; height: 34px;
     border-radius: 6px;
     border: 1px solid var(--border);
     padding: 2px;
     cursor: pointer;
     background: none;
+    flex-shrink: 0;
 }
 
+/* Size range */
+.sketch-tool-group input[type="range"] {
+    width: 80px;
+    accent-color: var(--accent);
+}
 
-/* Canvas */
+/* Toolbar selects */
+.sketch-tool-group select {
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 12px;
+    min-height: var(--touch-target);
+    cursor: pointer;
+}
 
+/* ── Canvas Area ──────────────────────────────────────────────────────────── */
+.sketch-canvas-wrap {
+    flex: 1;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
 #sketchCanvas {
     display: block;
-    border-radius: 10px;
     cursor: crosshair;
     background: white;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    min-width: 1600px;
-    min-height: 900px;
+    min-width: 1200px;
+    min-height: 700px;
+    touch-action: none; /* allow JS pointer events on touch */
 }
 
-
 /* Text input overlay */
-
 #sketchTextInput {
     display: none;
     position: absolute;
@@ -163,227 +175,85 @@
     color: inherit;
     padding: 2px 6px;
     outline: none;
-    min-width: 120px;
+    min-width: 100px;
     z-index: 10;
     font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
 }
 
+/* Snap guides */
+#sketchGuideX { display: none; position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(59,130,246,0.6); pointer-events: none; }
+#sketchGuideY { display: none; position: absolute; left: 0; right: 0; height: 1px; background: rgba(59,130,246,0.6); pointer-events: none; }
 
-/* Insert Menu (mind map) */
-
+/* ── Insert Menu ──────────────────────────────────────────────────────────── */
 .insert-menu {
     position: fixed;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 6px;
     display: none;
     box-shadow: var(--shadow);
     z-index: 3000;
-    min-width: 180px;
-    animation: fadeInDown 0.15s ease;
+    min-width: 170px;
+    animation: insertFadeIn 0.15s ease;
 }
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes insertFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
 .insert-item {
-    padding: 10px 16px;
+    padding: 9px 14px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-secondary);
-    transition: all 0.18s;
+    transition: all 0.15s;
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: var(--touch-target);
 }
+.insert-item:hover { background: var(--accent-light); color: var(--accent); }
 
-.insert-item:hover {
-    background: var(--accent-light);
-    color: var(--accent);
-}
-
-
-/* Hyperlink Modal */
-
-.hyperlink-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(6px);
-    z-index: 5500;
-    justify-content: center;
-    align-items: center;
-}
-
-.hyperlink-modal.show {
-    display: flex;
-}
-
-.modal-box.small {
-    max-width: 420px;
-    width: 90vw;
-    padding: 28px;
-    position: relative;
-}
-
-
-/* Node attachment indicators */
-
-.node-attachment {
-    font-size: 10px;
-    margin-top: 6px;
-    display: flex;
-    gap: 4px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.node-attachment-icon {
-    cursor: pointer;
-    font-size: 13px;
-    padding: 3px 7px;
-    border-radius: 10px;
-    background: var(--accent-light);
-    transition: all 0.2s;
-}
-
-.node-attachment-icon:hover {
-    background: var(--accent);
-    color: white;
-    transform: scale(1.1);
-}
-
-
-/* Node inline insert button */
-
-.node-insert-btn {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: white;
-    border: none;
-    font-size: 12px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    z-index: 20;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    transition: transform 0.15s;
-}
-
-.mindmap-node:hover .node-insert-btn {
-    display: flex;
-}
-
-.node-insert-btn:hover {
-    transform: scale(1.2);
-}
-
-/* Responsive design for sketch */
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — TABLET  768px
+   ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-    .sketch-modal-content {
-        padding: 12px;
-        gap: 8px;
-    }
+    .sketch-modal-content { padding: 10px; gap: 8px; }
+    .sketch-header { font-size: 14px; padding-bottom: 8px; }
+    .sketch-close { padding: 6px 10px; font-size: 11px; }
+    .sketch-header-actions { gap: 4px; }
 
-    .sketch-header {
-        font-size: 15px;
-        padding-bottom: 8px;
-    }
+    /* Collapse some close buttons */
+    .sketch-close.secondary { display: none; }
 
-    .sketch-close {
-        padding: 8px 10px;
-        font-size: 12px;
-        min-height: 44px;
-    }
-
-    .sketch-toolbar {
-        gap: 4px;
-        padding: 6px 0;
-    }
-
-    .sketch-tool-group {
-        padding: 4px 6px;
-        gap: 2px;
-    }
-
-    .sketch-tool-label {
-        font-size: 7px;
-    }
-
-    .sketch-tool,
-    .sketch-shape {
-        padding: 8px 10px;
-        font-size: 12px;
-        min-height: 44px;
-    }
+    .sketch-tool-group input[type="range"] { width: 60px; }
+    #sketchCanvas { min-width: 900px; min-height: 500px; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — PHONE  480px
+   ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
-    .sketch-modal-content {
-        padding: 10px;
-    }
+    .sketch-modal-content { padding: 8px; gap: 6px; }
+    .sketch-header { font-size: 13px; }
+    .sketch-close { padding: 5px 9px; font-size: 11px; border-radius: 7px; }
 
-    .sketch-header {
-        font-size: 14px;
-        flex-direction: column;
-        gap: 8px;
-    }
+    .sketch-tool-group { padding: 4px 6px; gap: 2px; }
+    .sketch-tool, .sketch-shape { padding: 5px 8px; font-size: 11px; min-height: 38px; }
+    .sketch-tool-label { font-size: 7px; }
 
-    .sketch-header > div {
-        width: 100%;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
+    .sketch-tool-group input[type="range"] { width: 50px; }
+    #sketchStrokeColor, #sketchFillColor { width: 30px; height: 30px; }
 
-    .sketch-close {
-        flex: 1 1 calc(50% - 2px);
-    }
+    #sketchCanvas { min-width: 700px; min-height: 400px; }
 
-    .sketch-toolbar {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 4px;
+    .insert-menu {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        top: auto;
+        border-radius: 16px 16px 0 0;
+        min-width: auto;
     }
-
-    .sketch-tool-group {
-        flex: 1 1 auto;
-        flex-wrap: wrap;
-        gap: 2px;
-    }
-
-    .sketch-tool,
-    .sketch-shape,
-    .sketch-tool-group select,
-    input[type="range"],
-    input[type="color"] {
-        flex: 1 1 calc(50% - 2px);
-        min-width: 44px;
-        min-height: 44px;
-        padding: 8px 10px;
-        font-size: 12px;
-    }
-
-    canvas {
-        max-width: 100%;
-        max-height: 100%;
-    }
+    .insert-item { padding: 12px 16px; font-size: 14px; }
 }
