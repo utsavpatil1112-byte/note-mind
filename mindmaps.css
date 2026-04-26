@@ -463,57 +463,108 @@ body[data-structure="fourway"] .mindmap-node[data-direction="west"] {
 /* Responsive design for mind maps */
 @media (max-width: 768px) {
     .mindmap-topbar {
-        padding: 8px 16px;
+        padding: 8px 12px;
         height: auto;
+        gap: 8px;
         flex-wrap: wrap;
     }
 
     .mindmap-topbar button {
         padding: 8px 12px;
-        font-size: 14px;
-        margin-left: 4px;
-        min-width: 44px;
+        font-size: 13px;
+        margin: 0;
         min-height: 44px;
-    }
-
-    .structure-controls {
-        gap: 6px;
-        flex-wrap: wrap;
     }
 
     #mindMapName {
         font-size: 16px;
-        order: -1;
         flex-basis: 100%;
-        text-align: left;
-        margin-bottom: 8px;
+        order: -1;
+        margin-bottom: 4px;
+    }
+
+    .structure-controls {
+        gap: 6px;
+        width: 100%;
+        flex-wrap: wrap;
     }
 }
 
 @media (max-width: 480px) {
-    .structure-controls {
+    .mindmap-topbar {
+        padding: 8px 10px;
         flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
     }
 
     .mindmap-topbar button {
-        flex: 1;
-        min-width: auto;
+        padding: 8px 12px;
+        font-size: 12px;
+        flex: 1 1 calc(50% - 4px);
+        min-height: 44px;
+    }
+
+    .structure-selector {
+        flex: 1 1 100%;
     }
 
     .structure-btn {
+        width: 100%;
         justify-content: center;
     }
 
+    .structure-menu {
+        max-height: 50vh;
+        max-width: 90vw;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+
+    .mindmap-canvas {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mindmap-center-node {
+        font-size: 14px;
+        padding: 12px 20px;
+        min-width: 100px;
+    }
+
+    .mindmap-node {
+        font-size: 12px;
+        padding: 8px 14px;
+        min-width: 80px;
+    }
+
+    .more-menu-container {
+        position: relative;
+        flex: 1 1 100%;
+    }
+
     .more-menu {
-        position: static;
-        box-shadow: none;
-        border: none;
-        background: transparent;
-        padding: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 4px;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px;
+        box-shadow: var(--shadow);
+        z-index: 100;
+        min-width: 140px;
+        flex-direction: column;
+    }
+
+    .more-menu.show {
+        display: flex;
+    }
+
+    .more-menu button,
+    .more-menu span {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 12px;
+        text-align: left;
     }
 }

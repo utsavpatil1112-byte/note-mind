@@ -299,66 +299,91 @@
 /* Responsive design for sketch */
 @media (max-width: 768px) {
     .sketch-modal-content {
-        padding: 16px;
+        padding: 12px;
         gap: 8px;
     }
 
     .sketch-header {
-        font-size: 16px;
+        font-size: 15px;
         padding-bottom: 8px;
     }
 
     .sketch-close {
-        padding: 8px 12px;
-        font-size: 14px;
-        min-width: 44px;
+        padding: 8px 10px;
+        font-size: 12px;
         min-height: 44px;
     }
 
     .sketch-toolbar {
-        gap: 6px;
+        gap: 4px;
         padding: 6px 0;
     }
 
     .sketch-tool-group {
-        padding: 4px 8px;
-        gap: 3px;
+        padding: 4px 6px;
+        gap: 2px;
     }
 
     .sketch-tool-label {
-        font-size: 8px;
+        font-size: 7px;
     }
 
     .sketch-tool,
     .sketch-shape {
         padding: 8px 10px;
-        font-size: 13px;
-        min-width: 44px;
+        font-size: 12px;
         min-height: 44px;
-    }
-
-    #sketchSize {
-        width: 80px;
     }
 }
 
 @media (max-width: 480px) {
-    .sketch-toolbar {
+    .sketch-modal-content {
+        padding: 10px;
+    }
+
+    .sketch-header {
+        font-size: 14px;
         flex-direction: column;
-        align-items: stretch;
+        gap: 8px;
+    }
+
+    .sketch-header > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .sketch-close {
+        flex: 1 1 calc(50% - 2px);
+    }
+
+    .sketch-toolbar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
     }
 
     .sketch-tool-group {
-        justify-content: center;
+        flex: 1 1 auto;
         flex-wrap: wrap;
+        gap: 2px;
     }
 
     .sketch-tool,
     .sketch-shape,
-    select,
+    .sketch-tool-group select,
     input[type="range"],
     input[type="color"] {
-        flex: 1;
+        flex: 1 1 calc(50% - 2px);
         min-width: 44px;
+        min-height: 44px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
     }
 }

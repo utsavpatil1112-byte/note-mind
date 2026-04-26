@@ -284,59 +284,99 @@
 /* Responsive design for note editor */
 @media (max-width: 768px) {
     .note-topbar {
-        padding: 8px 16px;
+        padding: 8px 12px;
         flex-wrap: wrap;
+        gap: 8px;
     }
 
     .note-topbar button {
         padding: 8px 12px;
-        font-size: 14px;
-        min-width: 44px;
+        font-size: 13px;
         min-height: 44px;
+        flex: 1;
+        min-width: 40px;
     }
 
-    .note-toolbar {
-        padding: 8px 12px;
+    #noteName {
+        font-size: 16px;
+        flex-basis: 100%;
+        order: -1;
+        margin-bottom: 4px;
+    }
+
+    .note-actions {
         gap: 4px;
-    }
-
-    .note-toolbar button,
-    .note-toolbar select,
-    .note-toolbar input[type="number"] {
-        padding: 8px 10px;
-        font-size: 14px;
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    .note-toolbar input[type="color"] {
-        width: 44px;
-        height: 44px;
+        width: 100%;
     }
 }
 
 @media (max-width: 480px) {
+    .note-topbar {
+        padding: 8px 10px;
+    }
+
+    .note-topbar button {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
     .note-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+        gap: 4px;
+        padding: 8px 10px;
     }
 
     .note-toolbar button,
     .note-toolbar select,
     .note-toolbar input[type="number"],
     .note-toolbar input[type="color"] {
-        flex: 1;
-        min-width: auto;
+        padding: 8px 10px;
+        font-size: 12px;
+        min-height: 44px;
+        flex: 1 1 calc(50% - 4px);
+    }
+
+    .note-toolbar input[type="color"] {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 auto;
+    }
+
+    .container {
+        padding: 12px;
+    }
+
+    #lineEditor {
+        font-size: 15px;
+    }
+
+    .more-menu-container {
+        position: relative;
+        flex: 1 1 100%;
     }
 
     .more-menu {
-        position: static;
-        box-shadow: none;
-        border: none;
-        background: transparent;
-        padding: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 4px;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px;
+        box-shadow: var(--shadow);
+        z-index: 100;
+        min-width: 160px;
+        flex-direction: column;
+    }
+
+    .more-menu.show {
+        display: flex;
+    }
+
+    .more-menu button,
+    .more-menu span {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 13px;
+        text-align: left;
     }
 }

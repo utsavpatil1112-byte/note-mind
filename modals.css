@@ -97,7 +97,63 @@
         margin: 20px;
         max-width: none;
         width: calc(100% - 40px);
+        max-height: calc(100vh - 40px);
+        border-radius: 16px;
     }
+
+    .modal-close {
+        top: 12px;
+        right: 16px;
+        font-size: 24px;
+    }
+
+    #folderMenu {
+        max-width: calc(100vw - 32px);
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    #folderMenu div {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-box {
+        padding: 16px;
+        margin: 16px;
+        width: calc(100% - 32px);
+        max-height: calc(100vh - 32px);
+        border-radius: 12px;
+    }
+
+    .modal-close {
+        top: 8px;
+        right: 12px;
+        font-size: 20px;
+    }
+
+    .shortcut-section h3 {
+        font-size: 16px;
+    }
+
+    .shortcut-section p {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    #folderMenu {
+        max-width: calc(100vw - 16px);
+        max-height: 50vh;
+        border-radius: 10px;
+    }
+
+    #folderMenu div {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
 
     .modal-close {
         top: 16px;
