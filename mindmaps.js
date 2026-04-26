@@ -1,12 +1,12 @@
 // mindmaps.js - Complete Mind Map functionality (Dynamic connections)
 
 // ─── Canvas constants ─────────────────────────────────────────────────────────
-var CNW_HALF = 80;
-var CNH_HALF = 24;
-var NW_HALF  = 65;
-var NH_HALF  = 18;
-var SN_W_HALF = 45;
-var SN_H_HALF = 14;
+var CNW_HALF = 40;
+var CNH_HALF = 20;
+var NW_HALF  = 40;
+var NH_HALF  = 20;
+var SN_W_HALF = 40;
+var SN_H_HALF = 20;
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 function exportMindMap() {
@@ -156,78 +156,293 @@ function layoutNodes() {
     if (!currentMindMap) return;
 
     var structure = currentMindMap.structure || currentStructure;
-    var positions = FIXED_POSITIONS[structure];
-    if (!positions) return;
 
-    var centerNode = null;
-    var otherNodes = [];
-    
-    for (var i = 0; i < currentMindMap.nodes.length; i++) {
-        if (currentMindMap.nodes[i].isCenter) {
-            centerNode = currentMindMap.nodes[i];
-        } else {
-            otherNodes.push(currentMindMap.nodes[i]);
-        }
-    }
-
-    // Set center position
-    if (centerNode && positions.center) {
-        centerNode.x = positions.center.x;
-        centerNode.y = positions.center.y;
-    }
-
-    // Set node positions by matching text
-    for (var j = 0; j < otherNodes.length; j++) {
-        var node = otherNodes[j];
-        var nodeText = node.text;
-        
-        for (var key in positions.nodes) {
-            if (nodeText === key || nodeText.indexOf(key) !== -1 || key.indexOf(nodeText) !== -1) {
-                node.x = positions.nodes[key].x;
-                node.y = positions.nodes[key].y;
-                break;
+    // For two-way: skip the FIXED_POSITIONS lookup entirely — reflowTwoWay
+    // inside applyRecursiveFallbackPositions handles all placement cleanly.
+    if (structure !== 'twoway') {
+        var positions = FIXED_POSITIONS[structure];
+        if (positions) {
+            var centerNodeForLayout = null;
+            var otherNodes = [];
+            for (var i = 0; i < currentMindMap.nodes.length; i++) {
+                if (currentMindMap.nodes[i].isCenter) centerNodeForLayout = currentMindMap.nodes[i];
+                else otherNodes.push(currentMindMap.nodes[i]);
             }
-        }
-    }
-
-    // Set sub-node positions
-    if (!currentMindMap.subNodes) currentMindMap.subNodes = {};
-    
-    for (var parentId in currentMindMap.subNodes) {
-        var subs = currentMindMap.subNodes[parentId];
-        if (!subs) continue;
-        var parentNodeForSubs = null;
-        for (var pi = 0; pi < currentMindMap.nodes.length; pi++) {
-            if (currentMindMap.nodes[pi].id == parentId) {
-                parentNodeForSubs = currentMindMap.nodes[pi];
-                break;
+            if (centerNodeForLayout && positions.center) {
+                centerNodeForLayout.x = positions.center.x;
+                centerNodeForLayout.y = positions.center.y;
             }
-        }
-        
-        for (var s = 0; s < subs.length; s++) {
-            var sub = subs[s];
-            var subText = sub.text;
-            var isBrace = structure === 'brace' && parentNodeForSubs;
-            var braceKey = null;
-            if (isBrace && (subText === 'Sub 1' || subText === 'Sub 2')) {
-                if (parentNodeForSubs.text === 'Part 1') {
-                    braceKey = subText === 'Sub 1' ? 'Sub 1_Part1' : 'Sub 2_Part1';
-                } else if (parentNodeForSubs.text === 'Part 2') {
-                    braceKey = subText === 'Sub 1' ? 'Sub 1_Part2' : 'Sub 2_Part2';
+            for (var j = 0; j < otherNodes.length; j++) {
+                var node = otherNodes[j];
+                for (var key in positions.nodes) {
+                    if (node.text === key || node.text.indexOf(key) !== -1 || key.indexOf(node.text) !== -1) {
+                        node.x = positions.nodes[key].x;
+                        node.y = positions.nodes[key].y;
+                        break;
+                    }
                 }
             }
-            
-            for (var subKey in positions.subnodes) {
-                if ((braceKey && subKey === braceKey) || subText === subKey || subText.indexOf(subKey) !== -1) {
-                    sub.x = positions.subnodes[subKey].x;
-                    sub.y = positions.subnodes[subKey].y;
-                    break;
+            if (!currentMindMap.subNodes) currentMindMap.subNodes = {};
+            for (var parentId in currentMindMap.subNodes) {
+                var subs = currentMindMap.subNodes[parentId];
+                if (!subs) continue;
+                var parentNodeForSubs = null;
+                for (var pi = 0; pi < currentMindMap.nodes.length; pi++) {
+                    if (currentMindMap.nodes[pi].id == parentId) { parentNodeForSubs = currentMindMap.nodes[pi]; break; }
+                }
+                for (var s = 0; s < subs.length; s++) {
+                    var sub = subs[s];
+                    var isBrace = structure === 'brace' && parentNodeForSubs;
+                    var braceKey = null;
+                    if (isBrace && (sub.text === 'Sub 1' || sub.text === 'Sub 2')) {
+                        if (parentNodeForSubs.text === 'Part 1') braceKey = sub.text === 'Sub 1' ? 'Sub 1_Part1' : 'Sub 2_Part1';
+                        else if (parentNodeForSubs.text === 'Part 2') braceKey = sub.text === 'Sub 1' ? 'Sub 1_Part2' : 'Sub 2_Part2';
+                    }
+                    for (var subKey in positions.subnodes) {
+                        if ((braceKey && subKey === braceKey) || sub.text === subKey || sub.text.indexOf(subKey) !== -1) {
+                            sub.x = positions.subnodes[subKey].x;
+                            sub.y = positions.subnodes[subKey].y;
+                            break;
+                        }
+                    }
                 }
             }
         }
+    } else {
+        // Two-way: ensure center has a sensible default position if not yet set.
+        for (var ci = 0; ci < currentMindMap.nodes.length; ci++) {
+            if (currentMindMap.nodes[ci].isCenter) {
+                if (!currentMindMap.nodes[ci].x || !currentMindMap.nodes[ci].y) {
+                    currentMindMap.nodes[ci].x = FIXED_POSITIONS.twoway.center.x;
+                    currentMindMap.nodes[ci].y = FIXED_POSITIONS.twoway.center.y;
+                }
+                break;
+            }
+        }
+        if (!currentMindMap.subNodes) currentMindMap.subNodes = {};
     }
 
+    applyRecursiveFallbackPositions();
     renderMindMap();
+}
+
+function buildNodeLookup() {
+    var lookup = {};
+    if (!currentMindMap) return lookup;
+    if (currentMindMap.nodes) {
+        for (var i = 0; i < currentMindMap.nodes.length; i++) {
+            var n = currentMindMap.nodes[i];
+            lookup[n.id] = n;
+            if (n.isCenter) lookup['center'] = n;
+        }
+    }
+    if (currentMindMap.subNodes) {
+        for (var pid in currentMindMap.subNodes) {
+            var arr = currentMindMap.subNodes[pid] || [];
+            for (var j = 0; j < arr.length; j++) lookup[arr[j].id] = arr[j];
+        }
+    }
+    return lookup;
+}
+
+function applyRecursiveFallbackPositions() {
+    if (!currentMindMap) return;
+    if (!currentMindMap.subNodes) currentMindMap.subNodes = {};
+
+    // ── CRITICAL FIX: declare structure as a local variable ──────────────────
+    var structure = currentMindMap.structure || currentStructure;
+
+    var nodeLookup = buildNodeLookup();
+    var center = nodeLookup['center'];
+    if (!center) return;
+
+    // ── Structured reflows: twoway and oneway get their own full reflow ───────
+    if (structure === 'twoway') {
+        reflowTwoWay(center, nodeLookup);
+        return;
+    }
+    if (structure === 'oneway') {
+        reflowOneWay(center, nodeLookup);
+        return;
+    }
+
+    // ── Other structures: original fallback logic ─────────────────────────────
+    var rootChildren = [];
+    for (var i = 0; i < currentMindMap.nodes.length; i++) {
+        if (!currentMindMap.nodes[i].isCenter) rootChildren.push(currentMindMap.nodes[i]);
+    }
+
+    var rootSpacing = 90;
+    var rootStartY = center.y - ((rootChildren.length - 1) * rootSpacing / 2);
+    for (var r = 0; r < rootChildren.length; r++) {
+        if (rootChildren[r].x === undefined || rootChildren[r].y === undefined) {
+            rootChildren[r].x = center.x + 210;
+            rootChildren[r].y = rootStartY + (r * rootSpacing);
+        }
+    }
+
+    function layoutChildren(parentId, depth) {
+        var parentNode = nodeLookup[parentId];
+        var children = currentMindMap.subNodes[parentId] || [];
+        if (!parentNode || !children.length) return;
+        var spacing = Math.max(50, 90 - (depth * 8));
+        var startY = parentNode.y - ((children.length - 1) * spacing / 2);
+        for (var c = 0; c < children.length; c++) {
+            if (children[c].x === undefined || children[c].y === undefined) {
+                children[c].x = parentNode.x + 180;
+                children[c].y = startY + (c * spacing);
+            }
+            nodeLookup[children[c].id] = children[c];
+            layoutChildren(children[c].id, depth + 1);
+        }
+    }
+
+    for (var t = 0; t < rootChildren.length; t++) {
+        layoutChildren(rootChildren[t].id, 1);
+    }
+}
+
+// ─── Two-Way full reflow ──────────────────────────────────────────────────────
+// Deterministically places every node and sub-node for the two-way layout.
+// Clears old positions and recomputes from scratch so branches never drift.
+function reflowTwoWay(center, nodeLookup) {
+    if (!currentMindMap) return;
+
+    // Use the visible canvas area so both sides always fit on screen.
+    var canvasEl = document.getElementById('mindMapCanvas');
+    var vpW = canvasEl ? canvasEl.clientWidth  : 900;
+    var vpH = canvasEl ? canvasEl.clientHeight : 500;
+    var cx  = Math.round(vpW / 2);
+    var cy  = Math.round(vpH / 2);
+    // Write back so the center node element moves to the correct position.
+    center.x = cx;
+    center.y = cy;
+
+    var rootChildren = [];
+    for (var i = 0; i < currentMindMap.nodes.length; i++) {
+        if (!currentMindMap.nodes[i].isCenter) rootChildren.push(currentMindMap.nodes[i]);
+    }
+
+    var leftBranches  = [];
+    var rightBranches = [];
+    var staged = [];   // brand-new nodes with no side hint yet
+
+    for (var r = 0; r < rootChildren.length; r++) {
+        var rt = rootChildren[r];
+        // Text prefix wins for default nodes (R→right, L→left).
+        var firstChar = (rt.text || '').trim().toUpperCase().charAt(0);
+        if (firstChar === 'R') {
+            rightBranches.push(rt);
+        } else if (firstChar === 'L') {
+            leftBranches.push(rt);
+        } else if (rt.x !== undefined && rt.x !== 0) {
+            // Custom-named node — keep the side it was on.
+            if (rt.x < cx) leftBranches.push(rt);
+            else rightBranches.push(rt);
+        } else {
+            staged.push(rt);
+        }
+    }
+
+    // Balance any brand-new (no-hint) nodes between sides.
+    for (var s = 0; s < staged.length; s++) {
+        if (leftBranches.length <= rightBranches.length) leftBranches.push(staged[s]);
+        else rightBranches.push(staged[s]);
+    }
+
+    // Horizontal offset scales with viewport so it never overflows.
+    var LEVEL1_X_OFFSET = Math.max(160, Math.round(vpW * 0.26));
+    var BRANCH_SPACING  = Math.max(80,  Math.round(vpH * 0.18));
+    var CHILD_X_STEP    = Math.max(130, Math.round(vpW * 0.16));
+    var CHILD_Y_GAP     = 70;
+
+    function placeBranchRoots(branches, dir) {
+        var total  = branches.length;
+        var startY = cy - ((total - 1) * BRANCH_SPACING / 2);
+        for (var b = 0; b < total; b++) {
+            branches[b].x = cx + dir * LEVEL1_X_OFFSET;
+            branches[b].y = startY + b * BRANCH_SPACING;
+            nodeLookup[branches[b].id] = branches[b];
+        }
+    }
+
+    placeBranchRoots(leftBranches,  -1);
+    placeBranchRoots(rightBranches,  1);
+
+    function placeChildren(parentId, parentX, parentY, dir, depth) {
+        var children = (currentMindMap.subNodes && currentMindMap.subNodes[parentId]) || [];
+        if (!children.length) return;
+
+        var gap    = Math.max(44, CHILD_Y_GAP - depth * 6);
+        var childX = parentX + dir * CHILD_X_STEP;
+        var startY = parentY - ((children.length - 1) * gap / 2);
+
+        for (var c = 0; c < children.length; c++) {
+            children[c].x = childX;
+            children[c].y = startY + c * gap;
+            nodeLookup[children[c].id] = children[c];
+            placeChildren(children[c].id, childX, children[c].y, dir, depth + 1);
+        }
+    }
+
+    for (var li = 0; li < leftBranches.length; li++) {
+        placeChildren(leftBranches[li].id, leftBranches[li].x, leftBranches[li].y, -1, 1);
+    }
+    for (var ri = 0; ri < rightBranches.length; ri++) {
+        placeChildren(rightBranches[ri].id, rightBranches[ri].x, rightBranches[ri].y,  1, 1);
+    }
+}
+
+// ─── One-Way full reflow ──────────────────────────────────────────────────────
+// Places center on the left and fans all nodes/sub-nodes out to the RIGHT only.
+function reflowOneWay(center, nodeLookup) {
+    if (!currentMindMap) return;
+
+    var canvasEl = document.getElementById('mindMapCanvas');
+    var vpW = canvasEl ? canvasEl.clientWidth  : 900;
+    var vpH = canvasEl ? canvasEl.clientHeight : 500;
+
+    // Anchor center at ~20% from the left edge.
+    var cx = Math.round(vpW * 0.20);
+    var cy = Math.round(vpH / 2);
+    center.x = cx;
+    center.y = cy;
+
+    var rootChildren = [];
+    for (var i = 0; i < currentMindMap.nodes.length; i++) {
+        if (!currentMindMap.nodes[i].isCenter) rootChildren.push(currentMindMap.nodes[i]);
+    }
+
+    var BRANCH_SPACING  = Math.max(80, Math.round(vpH * 0.18));
+    var LEVEL1_X_OFFSET = Math.max(160, Math.round(vpW * 0.22));
+    var CHILD_X_STEP    = Math.max(130, Math.round(vpW * 0.16));
+    var CHILD_Y_GAP     = 70;
+
+    // All level-1 nodes to the right.
+    var startY = cy - ((rootChildren.length - 1) * BRANCH_SPACING / 2);
+    for (var r = 0; r < rootChildren.length; r++) {
+        rootChildren[r].x = cx + LEVEL1_X_OFFSET;
+        rootChildren[r].y = startY + r * BRANCH_SPACING;
+        nodeLookup[rootChildren[r].id] = rootChildren[r];
+    }
+
+    function placeChildren(parentId, parentX, parentY, depth) {
+        var children = (currentMindMap.subNodes && currentMindMap.subNodes[parentId]) || [];
+        if (!children.length) return;
+        var gap     = Math.max(44, CHILD_Y_GAP - depth * 6);
+        var childX  = parentX + CHILD_X_STEP;
+        var startYc = parentY - ((children.length - 1) * gap / 2);
+        for (var c = 0; c < children.length; c++) {
+            children[c].x = childX;
+            children[c].y = startYc + c * gap;
+            nodeLookup[children[c].id] = children[c];
+            placeChildren(children[c].id, childX, children[c].y, depth + 1);
+        }
+    }
+
+    for (var t = 0; t < rootChildren.length; t++) {
+        placeChildren(rootChildren[t].id, rootChildren[t].x, rootChildren[t].y, 1);
+    }
 }
 
 // ─── Open / close ─────────────────────────────────────────────────────────────
@@ -288,18 +503,26 @@ function addDefaultNodes(structure) {
         if (currentMindMap.nodes[i].isCenter) { hasCenter = true; break; }
     }
     if (!hasCenter) {
-        currentMindMap.nodes.push({ id: 'center', text: currentMindMap.name || 'Main', x: 0, y: 0, isCenter: true });
+        var defaultCenter = { x: 300, y: 245 };
+        if (FIXED_POSITIONS[structure] && FIXED_POSITIONS[structure].center) {
+            defaultCenter = FIXED_POSITIONS[structure].center;
+        }
+        currentMindMap.nodes.push({ id: 'center', text: currentMindMap.name || 'Main', x: defaultCenter.x, y: defaultCenter.y, isCenter: true });
     }
 
     for (var d = 0; d < defaults.length; d++) {
         var nodeId = Date.now() + d + Math.random();
-        currentMindMap.nodes.push({
-            id: nodeId,
-            text: defaults[d],
-            x: 0,
-            y: 0,
-            isCenter: false
-        });
+        // For twoway: use text prefix (R→right, L→left) for correct initial side.
+        var initX, initY;
+        if (structure === 'twoway') {
+            var upperFirst = (defaults[d] || '').trim().toUpperCase().charAt(0);
+            var isSide = (upperFirst === 'L') ? -1 : 1;
+            initX = FIXED_POSITIONS.twoway.center.x + isSide * 200;
+            initY = FIXED_POSITIONS.twoway.center.y + (Math.floor(d / 2) * 100) - 50;
+        }
+        var newNode = { id: nodeId, text: defaults[d], isCenter: false };
+        if (initX !== undefined) { newNode.x = initX; newNode.y = initY; }
+        currentMindMap.nodes.push(newNode);
         
         var defaultSubs = DEFAULT_SUBNODES[structure];
         if (defaultSubs && defaultSubs[defaults[d]]) {
@@ -389,6 +612,17 @@ function saveMindMapData() {
     saveDataToLocalStorage();
 }
 
+function findSubNodeParentId(subNodeId) {
+    if (!currentMindMap || !currentMindMap.subNodes) return null;
+    for (var pid in currentMindMap.subNodes) {
+        var arr = currentMindMap.subNodes[pid] || [];
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id == subNodeId) return pid;
+        }
+    }
+    return null;
+}
+
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderMindMap() {
     var nodesContainer = document.getElementById('mindMapNodes');
@@ -426,18 +660,64 @@ function renderMindMap() {
         }
     }
 
+    function applyBoxStyle(el, isCenterNode, isSubNode, structureType) {
+        if (structureType === 'twoway') {
+            el.style.width = '80px';
+            el.style.height = '40px';
+            el.style.padding = '0';
+            el.style.minWidth = '80px';
+            el.style.borderRadius = '6px';
+            el.style.backgroundColor = '#f5f5f5';
+            el.style.border = '1.5px solid #333';
+            el.style.display = 'flex';
+            el.style.alignItems = 'center';
+            el.style.justifyContent = 'center';
+            el.style.fontSize = '12px';
+            el.style.textAlign = 'center';
+            el.style.color = '#000';
+            el.style.fontWeight = 'normal';
+            return;
+        }
+
+        if (isCenterNode) {
+            el.style.width = 'auto';
+            el.style.height = 'auto';
+            el.style.borderRadius = '40px';
+            el.style.padding = '14px 28px';
+            el.style.backgroundColor = '#f5f5f5';
+            el.style.border = '2px solid #333';
+            el.style.color = '#000';
+            return;
+        }
+
+        if (isSubNode) {
+            el.style.backgroundColor = '#fff';
+            el.style.border = '1.5px solid #333';
+            el.style.borderRadius = '6px';
+            el.style.minWidth = '60px';
+            el.style.textAlign = 'center';
+            el.style.padding = '8px 16px';
+            el.style.fontSize = '12px';
+            el.style.color = '#000';
+            return;
+        }
+
+        el.style.backgroundColor = '#f5f5f5';
+        el.style.border = '1.5px solid #333';
+        el.style.borderRadius = '6px';
+        el.style.minWidth = '80px';
+        el.style.textAlign = 'center';
+        el.style.padding = '10px 20px';
+        el.style.color = '#000';
+        el.style.fontWeight = 'normal';
+    }
+
     // Render center node
     if (centerNode && centerNodeEl) {
         centerNodeEl.textContent = centerNode.text || 'Main';
         centerNodeEl.style.left = (centerNode.x - CNW_HALF) + 'px';
         centerNodeEl.style.top  = (centerNode.y - CNH_HALF) + 'px';
-        centerNodeEl.style.width = 'auto';
-        centerNodeEl.style.height = 'auto';
-        centerNodeEl.style.borderRadius = '40px';
-        centerNodeEl.style.padding = '14px 28px';
-        centerNodeEl.style.backgroundColor = '#f5f5f5';
-        centerNodeEl.style.border = '2px solid #333';
-        centerNodeEl.style.color = '#000';
+        applyBoxStyle(centerNodeEl, true, false, structure);
         
         makeDraggable(centerNodeEl, centerNode, true);
         centerNodeEl.onclick = function(e) {
@@ -480,14 +760,7 @@ function renderMindMap() {
         nodeDiv.style.top      = (node.y - NH_HALF) + 'px';
         nodeDiv.style.position = 'absolute';
         nodeDiv.style.zIndex   = '10';
-        nodeDiv.style.backgroundColor = '#f5f5f5';
-        nodeDiv.style.border = '1.5px solid #333';
-        nodeDiv.style.borderRadius = '6px';
-        nodeDiv.style.minWidth = '80px';
-        nodeDiv.style.textAlign = 'center';
-        nodeDiv.style.padding = '10px 20px';
-        nodeDiv.style.color = '#000';
-        nodeDiv.style.fontWeight = 'normal';
+        applyBoxStyle(nodeDiv, false, false, structure);
 
         var textNode = document.createTextNode(node.text || 'Node');
         nodeDiv.appendChild(textNode);
@@ -605,14 +878,7 @@ function renderMindMap() {
             subDiv.style.top  = (sub.y - SN_H_HALF) + 'px';
             subDiv.style.position = 'absolute';
             subDiv.style.zIndex   = '10';
-            subDiv.style.backgroundColor = '#fff';
-            subDiv.style.border = '1.5px solid #333';
-            subDiv.style.borderRadius = '6px';
-            subDiv.style.minWidth = '60px';
-            subDiv.style.textAlign = 'center';
-            subDiv.style.padding = '8px 16px';
-            subDiv.style.fontSize = '12px';
-            subDiv.style.color = '#000';
+            applyBoxStyle(subDiv, false, true, structure);
 
             subDiv.onclick = (function(id) {
                 return function(e) {
@@ -621,9 +887,36 @@ function renderMindMap() {
                 };
             })(sub.id);
 
+            var subInsertBtn = document.createElement('button');
+            subInsertBtn.className = 'node-insert-btn';
+            subInsertBtn.textContent = '+';
+            subInsertBtn.title = 'Insert into this sub-node';
+            (function(sid, btn) {
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectedSubNodeId = sid;
+                    selectedNodeId = null;
+                    selectSubNode(sid);
+                    showNodeInsertMenu(e);
+                };
+            })(sub.id, subInsertBtn);
+            subDiv.appendChild(subInsertBtn);
+
+            subDiv.oncontextmenu = (function(pidForSub) {
+                return function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addSubNode(pidForSub);
+                };
+            })(sub.id);
+
             subDiv.onblur = (function(sb, div) {
                 return function() {
-                    sb.text = div.textContent;
+                    var clone = div.cloneNode(true);
+                    var btn3 = clone.querySelector('.node-insert-btn');
+                    if (btn3) btn3.parentNode.removeChild(btn3);
+                    sb.text = clone.textContent;
                     saveMindMapData();
                     triggerAutoSave();
                 };
@@ -648,147 +941,133 @@ function drawDynamicLines(container, centerNode, nodes, subNodes) {
     svg.setAttribute('height', '3000');
     svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:4;overflow:visible;';
     
-    // Create a map of node positions by text and id
+    // Create map of all node positions by id
     var nodeMap = {};
-    if (centerNode) {
-        nodeMap['Main'] = centerNode;
-        nodeMap['center'] = centerNode;
-    }
-    for (var i = 0; i < nodes.length; i++) {
-        nodeMap[nodes[i].text] = nodes[i];
-        nodeMap[nodes[i].id] = nodes[i];
-    }
-    
-    // Create map of sub-nodes by parent
-    var subNodesByParent = {};
+    if (centerNode) nodeMap['center'] = centerNode;
+    for (var i = 0; i < nodes.length; i++) nodeMap[nodes[i].id] = nodes[i];
     for (var parentId in subNodes) {
-        if (!subNodesByParent[parentId]) subNodesByParent[parentId] = [];
-        for (var s = 0; s < subNodes[parentId].length; s++) {
-            subNodesByParent[parentId].push(subNodes[parentId][s]);
-        }
+        var arr = subNodes[parentId] || [];
+        for (var s = 0; s < arr.length; s++) nodeMap[arr[s].id] = arr[s];
     }
     
     var structure = currentMindMap.structure || currentStructure;
-    
-    if (structure === 'twoway') {
-        // Connect Main to each node
-        for (var n = 0; n < nodes.length; n++) {
-            var node = nodes[n];
-            if (centerNode && node) {
-                drawCurvedLine(svg, centerNode.x, centerNode.y, node.x, node.y, '#555', 2);
-            }
+
+    function drawBraceGroup(parent, children, parentHalf, childHalf) {
+        if (!parent || !children || !children.length) return;
+        if (children.length === 1) {
+            var child = children[0];
+            var startX = parent.x + parentHalf;
+            var endX = child.x - childHalf;
+            drawBraceLine(svg, parent.y, child.y, startX, endX);
+            return;
         }
-        
-        // Connect each node to its sub-nodes
-        for (var pId in subNodesByParent) {
-            // Find the parent node
-            var parentNode = null;
-            for (var nn = 0; nn < nodes.length; nn++) {
-                if (nodes[nn].id == pId) {
-                    parentNode = nodes[nn];
-                    break;
-                }
-            }
-            if (!parentNode) continue;
-            
-            var subs = subNodesByParent[pId];
-            for (var sb = 0; sb < subs.length; sb++) {
-                var sub = subs[sb];
-                if (sub.x !== undefined && sub.y !== undefined) {
-                    drawCurvedLine(svg, parentNode.x, parentNode.y, sub.x, sub.y, '#555', 2);
-                }
-            }
-        }
-    }
-    else if (structure === 'oneway') {
-        // Connect Main to each node
-        for (var n2 = 0; n2 < nodes.length; n2++) {
-            var node2 = nodes[n2];
-            if (centerNode && node2) {
-                drawCurvedLine(svg, centerNode.x, centerNode.y, node2.x, node2.y, '#555', 2);
-            }
-        }
-        
-        // Connect each node to its sub-nodes
-        for (var pId2 in subNodesByParent) {
-            var parentNode2 = null;
-            for (var nn2 = 0; nn2 < nodes.length; nn2++) {
-                if (nodes[nn2].id == pId2) {
-                    parentNode2 = nodes[nn2];
-                    break;
-                }
-            }
-            if (!parentNode2) continue;
-            
-            var subs2 = subNodesByParent[pId2];
-            for (var sb2 = 0; sb2 < subs2.length; sb2++) {
-                var sub2 = subs2[sb2];
-                if (sub2.x !== undefined && sub2.y !== undefined) {
-                    drawCurvedLine(svg, parentNode2.x, parentNode2.y, sub2.x, sub2.y, '#555', 2);
-                }
-            }
+
+        var startX = parent.x + parentHalf;
+        var spineX = startX + 40;
+        var yValues = children.map(function(c) { return c.y; }).sort(function(a,b){return a-b;});
+        var topY = yValues[0];
+        var bottomY = yValues[yValues.length - 1];
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        var d = 'M ' + startX + ' ' + parent.y + ' H ' + spineX + ' M ' + spineX + ' ' + topY + ' V ' + bottomY;
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', '#555');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(path);
+
+        for (var c = 0; c < children.length; c++) {
+            var child = children[c];
+            var childEndX = child.x - childHalf;
+            var childPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            var childD = 'M ' + spineX + ' ' + child.y + ' H ' + childEndX;
+            childPath.setAttribute('d', childD);
+            childPath.setAttribute('stroke', '#555');
+            childPath.setAttribute('stroke-width', '2');
+            childPath.setAttribute('fill', 'none');
+            childPath.setAttribute('stroke-linecap', 'round');
+            childPath.setAttribute('stroke-linejoin', 'round');
+            svg.appendChild(childPath);
         }
     }
-    else if (structure === 'brace') {
-        // Brace structure using fixed brace geometry
-        if (centerNode) {
-            // Find Part 1 and Part 2 nodes
-            var part1 = null, part2 = null;
-            for (var np = 0; np < nodes.length; np++) {
-                if (nodes[np].text === 'Part 1') part1 = nodes[np];
-                if (nodes[np].text === 'Part 2') part2 = nodes[np];
-            }
 
-            // Main brace:
-            // M200,245 L250,245
-            // M250,140 L250,350
-            // M250,140 L300,140
-            // M250,350 L300,350
-            var mainBraceX = centerNode.x + 50;
-            drawStraightLine(svg, centerNode.x + 50, centerNode.y, mainBraceX + 50, centerNode.y, '#555', 2);
-            drawStraightLine(svg, mainBraceX + 50, 140, mainBraceX + 50, 350, '#555', 2);
-            drawStraightLine(svg, mainBraceX + 50, 140, mainBraceX + 100, 140, '#555', 2);
-            drawStraightLine(svg, mainBraceX + 50, 350, mainBraceX + 100, 350, '#555', 2);
+    function drawBraceLine(svgRoot, startY, endY, startX, endX) {
+        var pathData = 'M ' + startX + ' ' + startY;
+        if (startY === endY) {
+            pathData += ' H ' + endX;
+        } else {
+            var verticalX = Math.round(startX + Math.max(40, (endX - startX) * 0.45));
+            pathData += ' H ' + verticalX + ' V ' + endY + ' H ' + endX;
+        }
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        path.setAttribute('stroke', '#555');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        svgRoot.appendChild(path);
+    }
 
-            if (part1) {
-                // Part 1 brace:
-                // M400,140 L450,140
-                // M450,90 L450,190
-                // M450,90 L500,90
-                // M450,190 L500,190
-                drawStraightLine(svg, part1.x + 50, part1.y, part1.x + 100, part1.y, '#555', 2);
-                drawStraightLine(svg, part1.x + 100, 90, part1.x + 100, 190, '#555', 2);
-                drawStraightLine(svg, part1.x + 100, 90, part1.x + 150, 90, '#555', 2);
-                drawStraightLine(svg, part1.x + 100, 190, part1.x + 150, 190, '#555', 2);
+    if (structure === 'brace') {
+        if (centerNode && nodes.length) {
+            drawBraceGroup(centerNode, nodes, CNW_HALF, NW_HALF);
+        }
+        for (var pId in subNodes) {
+            var parent = nodeMap[pId];
+            if (!parent) continue;
+            var childList = subNodes[pId] || [];
+            if (!childList.length) continue;
+            drawBraceGroup(parent, childList, NW_HALF, SN_W_HALF);
+        }
+        container.appendChild(svg);
+        return;
+    }
 
-                var part1Subs = subNodesByParent[part1.id] || [];
-                for (var ps = 0; ps < part1Subs.length; ps++) {
-                    var subP1 = part1Subs[ps];
-                    if (subP1) {
-                        // Keep explicit connectors from brace endpoints into each sub node
-                        drawStraightLine(svg, part1.x + 150, subP1.y, subP1.x - 50, subP1.y, '#555', 2);
-                    }
-                }
-            }
+    function drawEdgeAnchoredLine(svgRoot, parent, child, structureType) {
+        if (!parent || !child) return;
+        var dir = child.x >= parent.x ? 1 : -1;
+        var parentHalf = parent.isCenter ? CNW_HALF : (parent.parentId ? SN_W_HALF : NW_HALF);
+        var childHalf  = child.isCenter ? CNW_HALF : (child.parentId ? SN_W_HALF : NW_HALF);
 
-            if (part2) {
-                // Part 2 brace:
-                // M400,350 L450,350
-                // M450,300 L450,400
-                // M450,300 L500,300
-                // M450,400 L500,400
-                drawStraightLine(svg, part2.x + 50, part2.y, part2.x + 100, part2.y, '#555', 2);
-                drawStraightLine(svg, part2.x + 100, 300, part2.x + 100, 400, '#555', 2);
-                drawStraightLine(svg, part2.x + 100, 300, part2.x + 150, 300, '#555', 2);
-                drawStraightLine(svg, part2.x + 100, 400, part2.x + 150, 400, '#555', 2);
+        var startX = parent.x + (dir * parentHalf);
+        var endX = child.x - (dir * childHalf);
 
-                var part2Subs = subNodesByParent[part2.id] || [];
-                for (var ps2 = 0; ps2 < part2Subs.length; ps2++) {
-                    var subP2 = part2Subs[ps2];
-                    if (subP2) {
-                        drawStraightLine(svg, part2.x + 150, subP2.y, subP2.x - 50, subP2.y, '#555', 2);
-                    }
-                }
+        if (structureType !== 'twoway') {
+            drawCurvedLine(svgRoot, parent.x, parent.y, child.x, child.y, '#555', 2);
+            return;
+        }
+
+        var ctrlX = (startX + endX) / 2;
+        var d = 'M ' + startX + ' ' + parent.y +
+                ' C ' + ctrlX + ' ' + parent.y + ', ' +
+                ctrlX + ' ' + child.y + ', ' +
+                endX + ' ' + child.y;
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', '#555');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        svgRoot.appendChild(path);
+    }
+
+    for (var n = 0; n < nodes.length; n++) {
+        if (centerNode && nodes[n]) drawEdgeAnchoredLine(svg, centerNode, nodes[n], structure);
+    }
+
+    for (var pId in subNodes) {
+        var parent = nodeMap[pId];
+        if (!parent) continue;
+        var childList = subNodes[pId] || [];
+        for (var c = 0; c < childList.length; c++) {
+            var child = childList[c];
+            if (child && child.x !== undefined && child.y !== undefined) {
+                drawEdgeAnchoredLine(svg, parent, child, structure);
             }
         }
     }
@@ -862,11 +1141,12 @@ function addSubNode(parentNodeId) {
 }
 
 function addSubNodeToSelected() {
-    if (!selectedNodeId) {
-        alert('Please select a node first by clicking on it');
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) {
+        alert('Please select a node or sub-node first by clicking on it');
         return;
     }
-    addSubNode(selectedNodeId === 'center' ? 'center' : selectedNodeId);
+    addSubNode(targetId === 'center' ? 'center' : targetId);
 }
 
 // ─── Drag handlers ────────────────────────────────────────────────────────────
@@ -960,6 +1240,7 @@ function selectNode(nodeId) {
 
 function selectSubNode(nodeId) {
     selectedSubNodeId = nodeId;
+    selectedNodeId = null;
     var all = document.querySelectorAll('.mindmap-node.subnode');
     for (var i = 0; i < all.length; i++) {
         if (all[i].getAttribute('data-id') == nodeId) all[i].classList.add('selected');
@@ -973,7 +1254,8 @@ function addMindMapNode() {
     var text = prompt("Enter node text:", "New Node");
     if (!text) return;
     if (!currentMindMap.nodes) currentMindMap.nodes = [];
-    currentMindMap.nodes.push({ id: Date.now(), text: text, x: 0, y: 0, isCenter: false });
+    // Leave x/y undefined so reflowTwoWay (or fallback) assigns the correct position.
+    currentMindMap.nodes.push({ id: Date.now(), text: text, isCenter: false });
     layoutNodes();
     triggerAutoSave();
 }
@@ -993,11 +1275,24 @@ function deleteSelectedNode() {
         }
         selectedNodeId = null;
     } else if (selectedSubNodeId) {
-        if (!confirm("Delete this sub-node?")) return;
-        for (var pid in currentMindMap.subNodes) {
-            var arr = currentMindMap.subNodes[pid];
+        if (!confirm("Delete this sub-node and all its child nodes?")) return;
+
+        function deleteSubTree(rootId) {
+            if (!currentMindMap.subNodes || !currentMindMap.subNodes[rootId]) return;
+            var kids = currentMindMap.subNodes[rootId].slice();
+            for (var k = 0; k < kids.length; k++) deleteSubTree(kids[k].id);
+            delete currentMindMap.subNodes[rootId];
+        }
+
+        deleteSubTree(selectedSubNodeId);
+        var parentOfSelected = findSubNodeParentId(selectedSubNodeId);
+        if (parentOfSelected && currentMindMap.subNodes[parentOfSelected]) {
+            var arr = currentMindMap.subNodes[parentOfSelected];
             for (var j = 0; j < arr.length; j++) {
-                if (arr[j].id == selectedSubNodeId) { arr.splice(j, 1); break; }
+                if (arr[j].id == selectedSubNodeId) {
+                    arr.splice(j, 1);
+                    break;
+                }
             }
         }
         selectedSubNodeId = null;
@@ -1043,8 +1338,9 @@ function toggleInsertMenu() {
         insertMenu.style.display = 'none';
         return;
     }
-    if (!selectedNodeId) {
-        alert('Please select a node first by clicking on it, then use Insert.');
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) {
+        alert('Please select a node or sub-node first by clicking on it, then use Insert.');
         return;
     }
     var rect = btn.getBoundingClientRect();
@@ -1083,7 +1379,8 @@ document.addEventListener('click', function(e) {
 // ─── Insert functions ─────────────────────────────────────────────────────────
 function insertPhoto() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) { alert('Please select a node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) { alert('Please select a node or sub-node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -1092,7 +1389,7 @@ function insertPhoto() {
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function(ev) {
-            addAttachmentToNode(selectedNodeId, 'image', ev.target.result);
+            addAttachmentToNode(targetId, 'image', ev.target.result);
             if (insertMenu) insertMenu.style.display = 'none';
         };
         reader.readAsDataURL(file);
@@ -1103,8 +1400,9 @@ function insertPhoto() {
 
 function insertHyperlink() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) {
-        alert('Please select a node first by clicking on it');
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) {
+        alert('Please select a node or sub-node first by clicking on it');
         if (insertMenu) insertMenu.style.display = 'none';
         return;
     }
@@ -1155,13 +1453,14 @@ function confirmHyperlink() {
         alert('Please enter a URL or select an internal file');
         return;
     }
-    if (!selectedNodeId) {
-        alert('No node selected. Please close this dialog, select a node, and try again.');
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) {
+        alert('No node selected. Please close this dialog, select a node or sub-node, and try again.');
         closeHyperlinkModal();
         return;
     }
     var openBoth = document.getElementById('nodeHyperlinkOpenBoth');
-    addAttachmentToNode(selectedNodeId, 'link', {
+    addAttachmentToNode(targetId, 'link', {
         url: link,
         openBoth: !!(openBoth && openBoth.checked)
     });
@@ -1170,17 +1469,19 @@ function confirmHyperlink() {
 
 function insertNoteComment() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) { alert('Please select a node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) { alert('Please select a node or sub-node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
     var comment = prompt('Enter your note/comment:');
     if (comment && comment.trim()) {
-        addAttachmentToNode(selectedNodeId, 'comment', comment.trim());
+        addAttachmentToNode(targetId, 'comment', comment.trim());
     }
     if (insertMenu) insertMenu.style.display = 'none';
 }
 
 function insertPDF() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) { alert('Please select a node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) { alert('Please select a node or sub-node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf';
@@ -1189,7 +1490,7 @@ function insertPDF() {
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function(ev) {
-            addAttachmentToNode(selectedNodeId, 'pdf', ev.target.result);
+            addAttachmentToNode(targetId, 'pdf', ev.target.result);
             if (insertMenu) insertMenu.style.display = 'none';
         };
         reader.readAsDataURL(file);
@@ -1200,11 +1501,12 @@ function insertPDF() {
 
 function openSketchInsert() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) { alert('Please select a node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) { alert('Please select a node or sub-node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
     if (typeof openSketchForNode === 'function') {
         openSketchForNode(function(sketchData) {
-            if (selectedNodeId && sketchData) {
-                addAttachmentToNode(selectedNodeId, 'sketch', sketchData);
+            if (targetId && sketchData) {
+                addAttachmentToNode(targetId, 'sketch', sketchData);
             }
         });
     }
@@ -1213,7 +1515,8 @@ function openSketchInsert() {
 
 function insertAudio() {
     var insertMenu = document.getElementById('insertMenu');
-    if (!selectedNodeId) { alert('Please select a node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
+    var targetId = selectedSubNodeId || selectedNodeId;
+    if (!targetId) { alert('Please select a node or sub-node first by clicking on it'); if (insertMenu) insertMenu.style.display = 'none'; return; }
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'audio/*';
@@ -1222,7 +1525,7 @@ function insertAudio() {
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function(ev) {
-            addAttachmentToNode(selectedNodeId, 'audio', ev.target.result);
+            addAttachmentToNode(targetId, 'audio', ev.target.result);
             if (insertMenu) insertMenu.style.display = 'none';
         };
         reader.readAsDataURL(file);
