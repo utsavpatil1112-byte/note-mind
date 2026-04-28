@@ -36,6 +36,101 @@ async function openFolder() {
     }
 }
 
+// Open a single local .json file (note or mindmap) without a workspace
+async function openLocalFile() {
+    if (!('showOpenFilePicker' in window)) {
+        // Fallback for browsers without File System Access API
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = async function(e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            try {
+                var text = await file.text();
+                var data = JSON.parse(text);
+                _importLocalFileData(data, file.name, null);
+            } catch (err) {
+                alert('Failed to read file: ' + (err.message || err));
+            }
+        };
+        input.click();
+        return;
+    }
+
+    if (!window.isSecureContext) {
+        alert('File system access requires HTTPS or localhost.');
+        return;
+    }
+
+    try {
+        var handles = await window.showOpenFilePicker({
+            multiple: false,
+            types: [{
+                description: 'Not Mind Files (JSON)',
+                accept: { 'application/json': ['.json'] }
+            }]
+        });
+        if (!handles || !handles.length) return;
+        var fileHandle = handles[0];
+        var file = await fileHandle.getFile();
+        var text = await file.text();
+        var data = JSON.parse(text);
+        _importLocalFileData(data, file.name, fileHandle);
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        alert('Failed to open file: ' + (err.message || err));
+    }
+}
+
+function _importLocalFileData(data, fileName, fileHandle) {
+    var baseName = fileName.replace(/\.json$/i, '');
+    if (data.type === 'note') {
+        var noteId = Date.now() + Math.random();
+        var note = {
+            id: noteId,
+            name: data.name || baseName,
+            content: data.content || '<div><br></div>',
+            parent: null,
+            fontSize: data.fontSize || 16,
+            fontFamily: data.fontFamily || "'Segoe UI', 'Inter', system-ui, sans-serif",
+            gridVisible: data.gridVisible !== false,
+            isLocalOnly: !fileHandle,
+            fileHandle: fileHandle || null,
+            filePath: fileHandle ? fileHandle.name : null
+        };
+        notes.push(note);
+        if (fileHandle) fileHandleMap.set(noteId, fileHandle);
+        saveDataToLocalStorage();
+        render();
+        setTimeout(function() { openNoteObj(note); }, 100);
+    } else if (data.type === 'mindmap') {
+        var mapId = Date.now() + Math.random();
+        var mindMap = {
+            id: mapId,
+            name: data.name || baseName,
+            type: 'mindmap',
+            parent: null,
+            structure: data.structure || 'radial',
+            nodes: data.nodes || [],
+            subNodes: data.subNodes || {},
+            nodeAttachments: data.nodeAttachments || {},
+            centerAttachments: data.centerAttachments || [],
+            isLocalOnly: !fileHandle,
+            fileHandle: fileHandle || null,
+            filePath: fileHandle ? fileHandle.name : null
+        };
+        mindMaps.push(mindMap);
+        if (fileHandle) fileHandleMap.set(mapId, fileHandle);
+        saveDataToLocalStorage();
+        render();
+        setTimeout(function() { openMindMap(mindMap); }, 100);
+    } else {
+        alert('Unrecognized file format. File must be a Not Mind note or mind map (.json).');
+    }
+}
+
+
 // Load entire workspace from directory
 async function loadWorkspaceFromDirectory(dirHandle, parentId = null, parentPath = '') {
     try {
@@ -183,7 +278,49 @@ function openRootFolder() {
 function openFolderFromExplorer(folderId) {
     currentFolder = folderId;
     historyStack.push(currentFolder);
+    
+    // Create storage file for folder if not already created
+    var folder = folders.find(function(f) { return f.id === folderId; });
+    if (folder && !folder.storageInitialized) {
+        createFolderStorageFile(folderId, folder.name).catch(function(err) {
+            console.log('Storage file creation optional:', err);
+        });
+    }
+    
     render();
+}
+
+// Create/open local storage file for folder
+async function createFolderStorageFile(folderId, folderName) {
+    if (!currentWorkspaceRoot) return;
+    
+    try {
+        var folder = folders.find(function(f) { return f.id === folderId; });
+        if (!folder || !folder.handle) return;
+        
+        var storageFileName = '.storage_' + folderId + '.json';
+        var storageData = {
+            folderId: folderId,
+            folderName: folderName,
+            created: new Date().toISOString(),
+            contents: []
+        };
+        
+        try {
+            var fileHandle = await folder.handle.getFileHandle(storageFileName, { create: true });
+            var writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(storageData, null, 2));
+            await writable.close();
+            
+            folder.storageInitialized = true;
+            folder.storageFile = storageFileName;
+            saveDataToLocalStorage();
+        } catch (err) {
+            console.log('Storage file creation note:', err);
+        }
+    } catch (err) {
+        console.error('Error creating folder storage:', err);
+    }
 }
 
 function openNoteFromExplorer(noteId) {
@@ -447,6 +584,10 @@ async function createPhysicalMindMap(parentFolderId, mindMapName) {
 
 // Save note to file
 async function saveNoteToFile(note) {
+    if (note.isLocalOnly) {
+        return true;
+    }
+    
     if (!currentWorkspaceRoot || !note.fileHandle) {
         return false;
     }
@@ -474,6 +615,10 @@ async function saveNoteToFile(note) {
 
 // Save mind map to file
 async function saveMindMapToFile(mindMap) {
+    if (mindMap.isLocalOnly) {
+        return true;
+    }
+    
     if (!currentWorkspaceRoot || !mindMap.fileHandle) {
         return false;
     }
@@ -509,7 +654,25 @@ async function deletePhysicalFile(fileId, type) {
         fileItem = mindMaps.find(function(m) { return m.id === fileId; });
     }
 
-    if (!fileItem || !fileItem.fileHandle) {
+    if (!fileItem) {
+        return false;
+    }
+
+    // Handle local-only files
+    if (fileItem.isLocalOnly) {
+        if (type === 'note') {
+            notes = notes.filter(function(n) { return n.id !== fileId; });
+        } else {
+            mindMaps = mindMaps.filter(function(m) { return m.id !== fileId; });
+        }
+        fileHandleMap.delete(fileId);
+        favorites = favorites.filter(function(id) { return id !== fileId; });
+        saveDataToLocalStorage();
+        render();
+        return true;
+    }
+
+    if (!fileItem.fileHandle) {
         return false;
     }
 
@@ -533,6 +696,7 @@ async function deletePhysicalFile(fileId, type) {
         fileHandleMap.delete(fileId);
         favorites = favorites.filter(function(id) { return id !== fileId; });
         saveDataToLocalStorage();
+        render();
 
         return true;
     } catch (err) {

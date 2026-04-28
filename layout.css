@@ -401,6 +401,11 @@
     align-items: center;
 }
 .create-item:hover { background: var(--accent-light); color: var(--accent); }
+.create-item-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 8px;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RESPONSIVE — TABLET  768px

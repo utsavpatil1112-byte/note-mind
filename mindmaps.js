@@ -32,9 +32,21 @@ function exportMindMap() {
 
 // ─── Structure registry ───────────────────────────────────────────────────────
 var ALL_STRUCTURES = {
+    radial:     { icon: '🔘', name: 'Radial' },
+    bubble:     { icon: '💭', name: 'Bubble Map' },
+    hierarchy:  { icon: '📊', name: 'Hierarchy' },
     twoway:     { icon: '↔️', name: 'Two-Way' },
     oneway:     { icon: '➡️', name: 'One-Way' },
-    brace:      { icon: '🔗', name: 'Brace Map' }
+    fourway:    { icon: '🔄', name: 'Four Way' },
+    tree:       { icon: '🌳', name: 'Tree (L→R)' },
+    treechart:  { icon: '🌲', name: 'Tree Chart (Top↓)' },
+    brace:      { icon: '🔗', name: 'Brace Map' },
+    orgchart:   { icon: '🏢', name: 'Org Chart' },
+    fishbone:   { icon: '🐟', name: 'Fishbone' },
+    timeline:   { icon: '📅', name: 'Timeline' },
+    divergence: { icon: '⭕', name: 'Divergence' },
+    matrix:     { icon: '📋', name: 'Matrix' },
+    free:       { icon: '✋', name: 'Free Layout' }
 };
 
 // ─── Default node templates ────────────────────────────────────────────────────
@@ -448,7 +460,7 @@ function reflowOneWay(center, nodeLookup) {
 // ─── Open / close ─────────────────────────────────────────────────────────────
 function openMindMap(mindMap) {
     currentMindMap = mindMap;
-    currentStructure = mindMap.structure || 'twoway';
+    currentStructure = mindMap.structure || 'radial';
 
     var nameSpan = document.getElementById("mindMapName");
     if (nameSpan) nameSpan.textContent = mindMap.name;
@@ -491,12 +503,18 @@ function openMindMap(mindMap) {
         addDefaultNodes(currentStructure);
     }
 
-    setTimeout(function() { layoutNodes(); }, 100);
+    setTimeout(function() { 
+        layoutNodes();
+        drawMindMap();
+    }, 100);
+    
+    triggerAutoSave();
 }
 
 function addDefaultNodes(structure) {
     if (!currentMindMap) return;
-    var defaults = DEFAULT_NODES[structure] || DEFAULT_NODES['twoway'];
+    var genericDefaults = ['Topic 1', 'Topic 2', 'Topic 3', 'Topic 4'];
+    var defaults = DEFAULT_NODES[structure] || genericDefaults;
     if (!currentMindMap.nodes) currentMindMap.nodes = [];
 
     var hasCenter = false;
@@ -504,7 +522,7 @@ function addDefaultNodes(structure) {
         if (currentMindMap.nodes[i].isCenter) { hasCenter = true; break; }
     }
     if (!hasCenter) {
-        var defaultCenter = { x: 300, y: 245 };
+        var defaultCenter = { x: 460, y: 245 };
         if (FIXED_POSITIONS[structure] && FIXED_POSITIONS[structure].center) {
             defaultCenter = FIXED_POSITIONS[structure].center;
         }
@@ -642,8 +660,9 @@ function renderMindMap() {
     var centerNodeEl = document.getElementById('mindMapCenterNode');
     if (centerNodeEl) centerNodeEl.style.display = '';
 
-    var positions = FIXED_POSITIONS[structure];
-    if (!positions) return;
+    var positions = FIXED_POSITIONS[structure] || null;
+    // Do not bail out — structures without fixed positions (radial, bubble, etc.)
+    // still render using the positions computed by layoutNodes / applyRecursiveFallbackPositions.
 
     var centerNode = null;
     var otherNodes = [];

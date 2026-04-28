@@ -8,18 +8,26 @@ function toggleSidebar() {
 }
 
 async function promptNewFolder() {
-    if (!currentWorkspaceRoot) {
-        alert("Please open a folder first using the 📂 button in explorer");
-        return;
-    }
-
     var name = prompt("Folder name:");
     if (!name) return;
 
-    var newFolder = await createPhysicalFolder(currentFolder, name);
-    if (newFolder) {
+    if (currentWorkspaceRoot) {
+        var newFolder = await createPhysicalFolder(currentFolder, name);
+        if (newFolder) {
+            render();
+            updateFileExplorer();
+        }
+    } else {
+        // Local (no workspace) — create in-memory folder
+        var localFolder = {
+            id: Date.now() + Math.random(),
+            name: name,
+            parent: currentFolder,
+            isLocalOnly: true
+        };
+        folders.push(localFolder);
+        saveDataToLocalStorage();
         render();
-        updateFileExplorer();
     }
 }
 
@@ -75,6 +83,33 @@ document.addEventListener('click', function(e) {
 });
 
 var latestGeneratedLink = '';
+
+function generateShareId() {
+    return 'share_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function storeSharePayload(payloadObj) {
+    try {
+        var shareId = generateShareId();
+        var shares = JSON.parse(localStorage.getItem('notmind-shares') || '{}');
+        shares[shareId] = payloadObj;
+        localStorage.setItem('notmind-shares', JSON.stringify(shares));
+        return shareId;
+    } catch (e) {
+        console.error('Failed to store share payload:', e);
+        return null;
+    }
+}
+
+function getSharePayload(shareId) {
+    try {
+        var shares = JSON.parse(localStorage.getItem('notmind-shares') || '{}');
+        return shares[shareId] || null;
+    } catch (e) {
+        console.error('Failed to get share payload:', e);
+        return null;
+    }
+}
 
 function encodeSharePayload(payloadObj) {
     try {
@@ -160,10 +195,11 @@ function openGenerateModal(type) {
     var base = window.location.href.split('?')[0].split('#')[0];
     var link = base + '?shareType=' + encodeURIComponent(type) + '&shareName=' + encodeURIComponent(fileName) + (shareId !== '' ? '&shareId=' + encodeURIComponent(shareId) : '');
     if (payload) {
-        var encodedPayload = encodeSharePayload(payload);
-        if (encodedPayload) {
-            link += '&data=' + encodeURIComponent(encodedPayload);
+        var payloadId = storeSharePayload(payload);
+        if (payloadId) {
+            link += '&payloadId=' + encodeURIComponent(payloadId);
         }
+        // Note: data= fallback removed to keep link short; payloadId is used instead.
     }
     latestGeneratedLink = link;
     input.value = link;
@@ -186,7 +222,11 @@ function openGeneratedLink() {
         alert('No generated link available.');
         return;
     }
-    window.open(link, '_blank', 'noopener,noreferrer');
+    if (tryOpenSharedLink(link)) {
+        closeGenerateModal();
+    } else {
+        window.open(link, '_blank', 'noopener,noreferrer');
+    }
 }
 
 function copyGeneratedLink() {
@@ -280,13 +320,20 @@ function tryOpenSharedLink(raw) {
         var u = new URL(raw, window.location.origin + window.location.pathname);
         var type = u.searchParams.get('shareType');
         var shareId = u.searchParams.get('shareId');
+        var payloadId = u.searchParams.get('payloadId');
         var encodedPayload = u.searchParams.get('data');
         if (!type) return false;
 
-        if (encodedPayload) {
-            var decodedPayload = decodeSharePayload(encodedPayload);
-            if (decodedPayload && decodedPayload.type === 'note' && decodedPayload.note) {
-                var sharedNote = upsertSharedNote(decodedPayload.note);
+        var payload = null;
+        if (payloadId) {
+            payload = getSharePayload(payloadId);
+        } else if (encodedPayload) {
+            payload = decodeSharePayload(encodedPayload);
+        }
+        
+        if (payload) {
+            if (payload.type === 'note' && payload.note) {
+                var sharedNote = upsertSharedNote(payload.note);
                 if (sharedNote) {
                     render();
                     openNoteObj(sharedNote);
@@ -294,8 +341,8 @@ function tryOpenSharedLink(raw) {
                     return true;
                 }
             }
-            if (decodedPayload && decodedPayload.type === 'mindmap' && decodedPayload.mindMap) {
-                var sharedMindMap = upsertSharedMindMap(decodedPayload.mindMap);
+            if (payload.type === 'mindmap' && payload.mindMap) {
+                var sharedMindMap = upsertSharedMindMap(payload.mindMap);
                 if (sharedMindMap) {
                     render();
                     openMindMap(sharedMindMap);
@@ -303,7 +350,7 @@ function tryOpenSharedLink(raw) {
                     return true;
                 }
             }
-            if (decodedPayload && decodedPayload.type === 'sketch') {
+            if (payload.type === 'sketch') {
                 openSketch();
                 return true;
             }
@@ -351,28 +398,86 @@ function handleIncomingShareLink() {
 }
 
 async function createItem(type) {
-    if (!currentWorkspaceRoot) {
-        alert("Please open a folder first using the 📂 button in explorer");
-        return;
-    }
-
     document.getElementById("createMenu").style.display = "none";
     var name = prompt(type === 'mindmap' ? "Mind Map name:" : "Note name:");
     if (!name) return;
 
     if (type === 'mindmap') {
-        var newMindMap = await createPhysicalMindMap(currentFolder, name);
-        if (newMindMap) {
-            updateFileExplorer();
-            openMindMap(newMindMap);
+        if (currentWorkspaceRoot) {
+            var newMindMap = await createPhysicalMindMap(currentFolder, name);
+            if (newMindMap) {
+                updateFileExplorer();
+                setTimeout(function() {
+                    openMindMap(newMindMap);
+                }, 200);
+            }
+        } else {
+            var newMindMapLocal = createLocalMindMap(name);
+            if (newMindMapLocal) {
+                setTimeout(function() {
+                    openMindMap(newMindMapLocal);
+                }, 200);
+            }
         }
     } else {
-        var newNote = await createPhysicalNote(currentFolder, name);
-        if (newNote) {
-            updateFileExplorer();
-            openNoteObj(newNote);
+        if (currentWorkspaceRoot) {
+            var newNote = await createPhysicalNote(currentFolder, name);
+            if (newNote) {
+                updateFileExplorer();
+                setTimeout(function() {
+                    openNoteObj(newNote);
+                }, 200);
+            }
+        } else {
+            var newNoteLocal = createLocalNote(name);
+            if (newNoteLocal) {
+                setTimeout(function() {
+                    openNoteObj(newNoteLocal);
+                }, 200);
+            }
         }
     }
+}
+
+function createLocalNote(noteName) {
+    var noteId = Date.now() + Math.random();
+    var note = {
+        id: noteId,
+        name: noteName,
+        content: "<div><br></div>",
+        parent: null,
+        fontSize: 16,
+        fontFamily: "'Segoe UI', 'Inter', system-ui, sans-serif",
+        gridVisible: true,
+        isLocalOnly: true
+    };
+    notes.push(note);
+    saveDataToLocalStorage();
+    render();
+    return note;
+}
+
+function createLocalMindMap(mapName) {
+    var mindMapId = Date.now() + Math.random();
+    var mindMap = {
+        id: mindMapId,
+        name: mapName,
+        type: 'mindmap',
+        parent: null,
+        structure: 'radial',
+        nodes: [
+            { id: 'center', text: mapName, x: 460, y: 245, isCenter: true }
+        ],
+        subNodes: {},
+        nodeAttachments: {},
+        centerAttachments: [],
+        isLocalOnly: true,
+        createdAt: new Date().toISOString()
+    };
+    mindMaps.push(mindMap);
+    saveDataToLocalStorage();
+    render();
+    return mindMap;
 }
 
 function buildBreadcrumb() {
@@ -513,7 +618,7 @@ function render() {
         foldersDiv.appendChild(noResults);
     }
 
-    createBtn.style.display = currentFolder !== null ? 'flex' : 'none';
+    createBtn.style.display = 'flex';
 }
 
 function buildFolderItem(f) {

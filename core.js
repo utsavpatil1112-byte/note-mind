@@ -60,8 +60,25 @@ function initRootFolderDisplay() {
 function saveDataToLocalStorage() {
     var data = {
         folders: folders.map(function(f) { return { id: f.id, name: f.name, parent: f.parent, path: f.path }; }),
-        notes: notes.map(function(n) { return { id: n.id, name: n.name, parent: n.parent, fontSize: n.fontSize, fontFamily: n.fontFamily, gridVisible: n.gridVisible, filePath: n.filePath }; }),
-        mindMaps: mindMaps.map(function(m) { return { id: m.id, name: m.name, parent: m.parent, structure: m.structure, filePath: m.filePath }; }),
+        notes: notes.map(function(n) { 
+            var noteData = { id: n.id, name: n.name, parent: n.parent, fontSize: n.fontSize, fontFamily: n.fontFamily, gridVisible: n.gridVisible, filePath: n.filePath };
+            if (n.isLocalOnly) {
+                noteData.isLocalOnly = true;
+                noteData.content = n.content;
+            }
+            return noteData;
+        }),
+        mindMaps: mindMaps.map(function(m) { 
+            var mapData = { id: m.id, name: m.name, parent: m.parent, structure: m.structure, filePath: m.filePath };
+            if (m.isLocalOnly) {
+                mapData.isLocalOnly = true;
+                mapData.nodes = m.nodes;
+                mapData.subNodes = m.subNodes;
+                mapData.nodeAttachments = m.nodeAttachments;
+                mapData.centerAttachments = m.centerAttachments;
+            }
+            return mapData;
+        }),
         favorites: favorites,
         currentStructure: currentStructure
     };
@@ -75,6 +92,60 @@ function loadDataFromLocalStorage() {
             var data = JSON.parse(savedData);
             favorites = data.favorites || [];
             currentStructure = data.currentStructure || 'radial';
+            
+            // Restore local-only folders
+            if (data.folders) {
+                for (var h = 0; h < data.folders.length; h++) {
+                    var folderData = data.folders[h];
+                    if (!folders.find(function(f) { return f.id == folderData.id; })) {
+                        folders.push({
+                            id: folderData.id,
+                            name: folderData.name,
+                            parent: folderData.parent,
+                            path: folderData.path || '',
+                            isLocalOnly: true
+                        });
+                    }
+                }
+            }
+
+            // Restore local-only notes and mindmaps
+            if (data.notes) {
+                for (var i = 0; i < data.notes.length; i++) {
+                    var noteData = data.notes[i];
+                    if (noteData.isLocalOnly && !notes.find(function(n) { return n.id === noteData.id; })) {
+                        notes.push({
+                            id: noteData.id,
+                            name: noteData.name,
+                            content: noteData.content || "<div><br></div>",
+                            parent: noteData.parent,
+                            fontSize: noteData.fontSize || 16,
+                            fontFamily: noteData.fontFamily || "'Segoe UI', 'Inter', system-ui, sans-serif",
+                            gridVisible: noteData.gridVisible !== false,
+                            isLocalOnly: true
+                        });
+                    }
+                }
+            }
+            
+            if (data.mindMaps) {
+                for (var j = 0; j < data.mindMaps.length; j++) {
+                    var mapData = data.mindMaps[j];
+                    if (mapData.isLocalOnly && !mindMaps.find(function(m) { return m.id === mapData.id; })) {
+                        mindMaps.push({
+                            id: mapData.id,
+                            name: mapData.name,
+                            parent: mapData.parent,
+                            structure: mapData.structure || 'radial',
+                            nodes: mapData.nodes || [],
+                            subNodes: mapData.subNodes || {},
+                            nodeAttachments: mapData.nodeAttachments || {},
+                            centerAttachments: mapData.centerAttachments || [],
+                            isLocalOnly: true
+                        });
+                    }
+                }
+            }
         } catch (e) {
             console.error('Failed to load saved data', e);
         }
@@ -202,4 +273,4 @@ function normalizeExternalUrl(url) {
 // Initialization
 loadTheme();
 loadDataFromLocalStorage();
-initAutoSave(); 
+initAutoSave();

@@ -58,7 +58,7 @@
     gap: 6px;
     align-items: center;
     flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 /* All buttons inside structure-controls */
 .structure-controls button {
@@ -95,7 +95,7 @@
     border-radius: 12px;
     box-shadow: var(--shadow);
     min-width: 220px;
-    z-index: 1100;
+    z-index: 9999;
     overflow: hidden;
     border: 1px solid var(--border);
     max-height: 70vh;
