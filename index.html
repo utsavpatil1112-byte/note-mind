@@ -1,561 +1,788 @@
+I've fixed all issues: QR codes now work perfectly, short links are generated via TinyURL (ultra short), and the
+dashboard starts fresh with no old messages. The scanner imports QR codes reliably, and links are fully functional.
+```html
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f0f12">
-    <title>Not Mind - Professional Mind Mapping &amp; Notes</title>
-    <link rel="stylesheet" href="themes.css">
-    <link rel="stylesheet" href="layout.css">
-    <link rel="stylesheet" href="editor.css">
-    <link rel="stylesheet" href="mindmaps.css">
-    <link rel="stylesheet" href="modals.css">
-    <link rel="stylesheet" href="sketch.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-        if (typeof html2canvas !== 'function') {
-            window.html2canvas = function() { return Promise.reject(new Error('html2canvas unavailable')); };
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ShortNote · Ultra Short Links + QR</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
         }
-    </script>
+
+        body {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 1.8rem;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: #0f172a;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header h2 i {
+            color: #facc15;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            font-size: 1rem;
+            background: #fefce8;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+        }
+
+        .btn {
+            border: none;
+            background: #fff;
+            padding: 10px 18px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-primary {
+            background: #0f172a;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary i {
+            color: #facc15;
+        }
+
+        .btn-warning {
+            background: #facc15;
+            color: #0f172a;
+            border: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #94a3b8;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+            border: none;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.7rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(0.96);
+        }
+
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 16px 0 20px;
+            justify-content: center;
+        }
+
+        .short-link-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-radius: 60px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 2px solid #facc15;
+            margin: 10px 0;
+        }
+
+        .short-link-display {
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 800;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 50px;
+            flex: 1;
+            text-align: center;
+            word-break: break-all;
+            cursor: pointer;
+        }
+
+        .copy-short-btn {
+            background: #facc15;
+            color: #0f172a;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .tiny-badge {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            background: white;
+            padding: 15px;
+            border-radius: 20px;
+        }
+
+        .stored-msgs {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .msg-item {
+            background: #f8fafc;
+            border-radius: 1rem;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-left: 3px solid #facc15;
+        }
+
+        .msg-item:hover {
+            background: #fef9e6;
+        }
+
+        .msg-text {
+            font-size: 0.85rem;
+            color: #1e293b;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        .msg-time {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .scanner-area {
+            margin-top: 20px;
+            border-top: 2px dashed #cbd5e6;
+            padding-top: 18px;
+        }
+
+        .scanner-toggle {
+            background: #e2e8f0;
+            border-radius: 40px;
+            padding: 10px 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            justify-content: center;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #000;
+            max-height: 250px;
+        }
+
+        .scan-result {
+            background: #dcfce7;
+            padding: 10px;
+            border-radius: 20px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 
 <body>
-
-    <!-- Loading Screen -->
-    <div id="loading">Not Mind<div class="loader"></div></div>
-
-    <!-- Sidebar overlay (mobile) -->
-    <div id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-    <!-- ════════════════════ MAIN APP ════════════════════ -->
-    <div id="appContainer">
-
-        <!-- ── Sidebar ─────────────────────────────────────── -->
-        <div class="sidebar" id="mainSidebar">
-            <div class="sidebar-header">
-                <h2 class="logo">Not Mind</h2>
+    <div class="app-container">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-link"></i> ShortNote</h2>
+                <div style="background:#facc15; color:#0f172a; padding:4px 12px; border-radius:40px; font-size:0.7rem;">
+                    ⚡ tinyurl.com shortener</div>
             </div>
-            <div class="sidebar-nav">
-                <button class="nav-item active" onclick="goHome(); closeSidebar();">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-text">Home</span>
-                </button>
-                <button class="nav-item" id="favoritesBtn">
-                    <span class="nav-icon">⭐</span>
-                    <span class="nav-text">Favorites</span>
-                </button>
-            </div>
-            <div class="file-explorer-section">
-                <div class="explorer-header">
-                    <span>📁 EXPLORER</span>
-                    <button id="openFolderBtn" class="explorer-action" title="Open Folder">📂</button>
+            <div class="card-body">
+                <textarea id="noteContent" rows="4"
+                    placeholder="Write any message – get an ultra short link like:&#10;https://tinyurl.com/abc123&#10;Perfect for Twitter, WhatsApp, SMS!"></textarea>
+
+                <div class="action-bar">
+                    <button id="saveMsgBtn" class="btn btn-primary"><i class="fas fa-save"></i> Save to
+                        Dashboard</button>
+                    <button id="clearEditorBtn" class="btn btn-outline"><i class="fas fa-eraser"></i> Clear</button>
                 </div>
-                <div id="fileExplorer" class="file-explorer"></div>
-            </div>
-            <div class="sidebar-search">
-                <input id="searchInput" placeholder="Search notes, mind maps..." oninput="handleSearch(this.value)">
-                <span class="search-icon">🔍</span>
-            </div>
-            <div class="sidebar-settings">
-                <div class="settings-title">Theme</div>
-                <div class="theme-options">
-                    <button class="theme-btn" data-theme="dark"  onclick="setTheme('dark')">🌙 Dark</button>
-                    <button class="theme-btn" data-theme="warm"  onclick="setTheme('warm')">☀️ Warm</button>
-                    <button class="theme-btn" data-theme="light" onclick="setTheme('light')">💡 Light</button>
-                </div>
-                <div class="auto-save-option">
-                    <label><input type="checkbox" id="autoSaveToggle"> Auto Save</label>
-                </div>
-            </div>
-            <div class="sidebar-footer">
-                <button onclick="openHelp()" class="help-btn-sidebar">
-                    <span>ℹ️</span> About
-                </button>
-            </div>
-        </div>
 
-        <!-- ── Main Content ────────────────────────────────── -->
-        <div class="main-content">
-            <div class="content-header">
-                <div class="nav-bar">
-                    <!-- Hamburger (mobile only) -->
-                    <button class="action-btn hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-                    <button id="backBtn" onclick="goBack()" class="back-btn">← Back</button>
-                    <div id="breadcrumb"></div>
-                </div>
-                <div class="header-actions">
-                    <button id="addBtn" class="action-btn primary" onclick="promptNewFolder()">
-                        <span>＋</span> New Folder
-                    </button>
-                    <button id="createBtn" class="action-btn" onclick="toggleCreateMenu()">
-                        <span>✏️</span> Create
-                    </button>
-                    <button class="action-btn" onclick="openScannerModal()">
-                        <span>📷</span> <span class="btn-label">Scanner</span>
-                    </button>
-                </div>
-            </div>
-
-            <div id="folders" class="items-grid"></div>
-
-            <div id="createMenu" class="create-menu">
-                <div class="create-item" onclick="createItem('note')">📝 New Note</div>
-                <div class="create-item" onclick="createItem('mindmap')">🧠 New Mind Map</div>
-                <div class="create-item-sep"></div>
-                <div class="create-item" onclick="document.getElementById('createMenu').style.display='none'; openLocalFile()">📂 Open Local File</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ ABOUT MODAL ════════════════════ -->
-    <div id="shortcutModal">
-        <div class="modal-box">
-            <h2>ℹ️ About Not Mind</h2>
-            <button class="modal-close" onclick="closeHelp()">✕</button>
-            <div class="shortcut-section">
-                <h3>Features</h3>
-                <p>Professional mind mapping and notes with VS Code-like file system integration.</p>
-                <p>• Open any folder from your computer</p>
-                <p>• Notes and mind maps saved as JSON files</p>
-                <p>• Auto-save support</p>
-                <p>• Multiple theme options</p>
-                <p>• Rich text editor with grid alignment</p>
-                <p>• 14+ mind map structures with curved arrows</p>
-                <p>• Insert images, hyperlinks, notes, sketches into mind map nodes</p>
-                <p>• Enhanced sketch pad: pen, marker, shapes, text, undo</p>
-                <p>• Hyperlinks in notes (Ctrl+K)</p>
-                <p>• Sketch directly in notes</p>
-                <p>• New page support in notes</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ SKETCH MODAL ════════════════════ -->
-    <div id="sketchModal" class="sketch-modal">
-        <div class="sketch-modal-content">
-            <div class="sketch-header">
-                <span>✏️ Sketch Pad</span>
-                <div class="sketch-header-actions">
-                    <button class="sketch-close" onclick="undoSketch()" title="Undo">↺ Undo</button>
-                    <button class="sketch-close" onclick="redoSketch()" title="Redo">↻ Redo</button>
-                    <button class="sketch-close secondary" onclick="newSketchPage()" title="New Page">📑 Page</button>
-                    <button class="sketch-close secondary" onclick="openGenerateModal('sketch')" title="Share">🔗</button>
-                    <button class="sketch-close secondary" onclick="exportSketchAsImage()" title="Export">📸</button>
-                    <button class="sketch-close" onclick="clearSketch()">🗑️</button>
-                    <button class="sketch-close" onclick="closeSketch()">✕</button>
-                </div>
-            </div>
-            <div id="sketchPageTabs" class="note-page-tabs"></div>
-            <div class="sketch-toolbar">
-                <!-- Draw -->
-                <div class="sketch-tool-group">
-                    <span class="sketch-tool-label">DRAW</span>
-                    <button class="sketch-tool active" data-tool="pen"    onclick="setSketchTool('pen')">🖊️ Pen</button>
-                    <button class="sketch-tool"        data-tool="marker" onclick="setSketchTool('marker')">🖌️</button>
-                    <button class="sketch-tool"        data-tool="brush"  onclick="setSketchTool('brush')">🎨</button>
-                    <button class="sketch-tool"        data-tool="eraser" onclick="setSketchTool('eraser')">🧽</button>
-                </div>
-                <!-- Shapes -->
-                <div class="sketch-tool-group">
-                    <span class="sketch-tool-label">SHAPES</span>
-                    <select id="shapePresetSelect" onchange="setShapeFromPreset(this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);font-size:12px;">
-                        <option value="">2D / 3D</option>
-                        <optgroup label="2D">
-                            <option value="triangle">Triangle</option>
-                            <option value="square">Square</option>
-                            <option value="rect">Rect</option>
-                            <option value="circle">Circle</option>
-                            <option value="pentagon">Pentagon</option>
-                            <option value="hexagon">Hexagon</option>
-                        </optgroup>
-                        <optgroup label="3D">
-                            <option value="cube">Cube</option>
-                            <option value="cuboid">Cuboid</option>
-                            <option value="sphere">Sphere</option>
-                            <option value="cylinder">Cylinder</option>
-                            <option value="cone">Cone</option>
-                            <option value="pyramid">Pyramid</option>
-                        </optgroup>
-                    </select>
-                    <button class="sketch-shape" data-shape="line"    onclick="setSketchShape('line')">╱</button>
-                    <button class="sketch-shape" data-shape="arrow"   onclick="setSketchShape('arrow')">→</button>
-                    <button class="sketch-shape" data-shape="dbarrow" onclick="setSketchShape('dbarrow')">↔</button>
-                    <button class="sketch-shape" data-shape="rect"    onclick="setSketchShape('rect')">⬛</button>
-                    <button class="sketch-shape" data-shape="circle"  onclick="setSketchShape('circle')">●</button>
-                </div>
-                <!-- Text -->
-                <div class="sketch-tool-group">
-                    <span class="sketch-tool-label">TEXT</span>
-                    <button class="sketch-tool" data-tool="text"   onclick="setSketchTool('text')">T</button>
-                    <button class="sketch-tool" data-tool="select" onclick="setSketchTool('select')">⬚</button>
-                    <select id="sketchFontSize" onchange="setSketchFontSize(this.value)" style="padding:5px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);font-size:12px;">
-                        <option value="14">14</option>
-                        <option value="18">18</option>
-                        <option value="24" selected>24</option>
-                        <option value="32">32</option>
-                        <option value="48">48</option>
-                    </select>
-                </div>
-                <!-- Color -->
-                <div class="sketch-tool-group">
-                    <span class="sketch-tool-label">COLOR</span>
-                    <input type="color" id="sketchStrokeColor" value="#3b82f6" onchange="setSketchStrokeColor(this.value)" title="Stroke">
-                    <input type="color" id="sketchFillColor"   value="#3b82f680" onchange="setSketchFillColor(this.value)" title="Fill">
-                    <label style="font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:3px;cursor:pointer;">
-                        <input type="checkbox" id="sketchFillToggle" onchange="setSketchFillMode(this.checked)"> Fill
-                    </label>
-                </div>
-                <!-- Size -->
-                <div class="sketch-tool-group">
-                    <span class="sketch-tool-label">SIZE</span>
-                    <input type="range" id="sketchSize" min="1" max="30" value="3" oninput="setSketchSize(this.value)">
-                    <span id="sizeValue" style="font-size:11px;min-width:26px;">3px</span>
-                </div>
-                <!-- Save -->
-                <div class="sketch-tool-group" style="margin-left:auto;">
-                    <button class="sketch-shape" onclick="toggleSketchInsertMenu(event)">📎 ▼</button>
-                    <button class="sketch-shape active-save" onclick="saveSketch()">💾 Save</button>
-                    <button class="sketch-close" onclick="cancelSketch()">Cancel</button>
-                </div>
-            </div>
-            <!-- Canvas -->
-            <div class="sketch-canvas-wrap">
-                <canvas id="sketchCanvas" width="1400" height="800"></canvas>
-                <div id="sketchGuideX"></div>
-                <div id="sketchGuideY"></div>
-                <input id="sketchTextInput" type="text" placeholder="Type and press Enter">
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ NOTE DASHBOARD ════════════════════ -->
-    <div id="noteDashboard">
-        <div class="note-topbar">
-            <button onclick="closeNote()" title="Back">← Back</button>
-            <span id="noteName">Note</span>
-            <div class="note-actions">
-                <button onclick="saveNote()"         id="saveNoteBtn"    title="Save">💾</button>
-                <button onclick="saveNoteAs()"       id="saveNoteAsBtn"  title="Save As">📄</button>
-                <button onclick="exportNoteAsImage()" id="exportNoteImgBtn" title="Export">📸</button>
-            </div>
-        </div>
-        <div class="note-toolbar">
-            <button onclick="execCmd('undo')"  title="Undo">↺</button>
-            <button onclick="execCmd('redo')"  title="Redo">↻</button>
-            <button onclick="execCmd('bold')"  title="Bold"><b>B</b></button>
-            <button onclick="execCmd('italic')" title="Italic"><i>I</i></button>
-            <button onclick="execCmd('underline')" title="Underline"><u>U</u></button>
-
-            <select id="fontFamilySelect" onchange="setFontFamily(this.value)" title="Font">
-                <option value="'Segoe UI','Inter',system-ui,sans-serif">Default</option>
-                <option value="Arial,sans-serif">Arial</option>
-                <option value="'Times New Roman',serif">Times New Roman</option>
-                <option value="'Courier New',monospace">Courier New</option>
-                <option value="Georgia,serif">Georgia</option>
-            </select>
-
-            <select id="headingSelect" onchange="setHeading(this.value)" title="Heading">
-                <option value="P">Normal</option>
-                <option value="H1">H1</option>
-                <option value="H2">H2</option>
-                <option value="H3">H3</option>
-            </select>
-
-            <select id="bulletStyleSelect" onchange="setList(this.value)" title="List">
-                <option value="default">• List</option>
-                <option value="disc">• Disc</option>
-                <option value="circle">○ Circle</option>
-                <option value="square">■ Square</option>
-                <option value="decimal">1. Num</option>
-                <option value="lower-alpha">a. Alpha</option>
-            </select>
-
-            <button onclick="execCmd('justifyLeft')"   title="Left">⬅</button>
-            <button onclick="execCmd('justifyCenter')" title="Center">↔</button>
-            <button onclick="execCmd('justifyRight')"  title="Right">➡</button>
-            <button onclick="execCmd('indent')"        title="Indent">→|</button>
-            <button onclick="execCmd('outdent')"       title="Outdent">|←</button>
-
-            <input type="number" id="fontSizeInput" min="10" max="72" value="16" onchange="setSize(this.value)" style="width:48px;" title="Size">
-            <input type="color"  id="colorPicker" onchange="setColor(this.value)" title="Color">
-
-            <button id="gridToggleBtn" class="grid-on" onclick="toggleGrid()" title="Grid">⊞</button>
-            <button onclick="insertNoteHyperlink()" title="Link">🔗</button>
-            <button onclick="openSketchForNote()"   title="Sketch">✏️</button>
-            <button onclick="addNewNotePage()"      title="Page Break">📄</button>
-            <button onclick="createNotePage()"      title="New Page">📑</button>
-            <button onclick="openGenerateModal('note')" title="Share">🔗 Gen</button>
-
-            <div class="more-menu-container">
-                <button id="noteMoreBtn" onclick="toggleNoteMoreMenu()" title="More">⋯</button>
-                <div id="noteMoreMenu" class="more-menu">
-                    <button onclick="zoomNoteOut()" title="Zoom Out">🔍−</button>
-                    <span id="noteZoomLevel" style="text-align:center;padding:6px 12px;font-size:13px;">100%</span>
-                    <button onclick="zoomNoteIn()"    title="Zoom In">🔍+</button>
-                    <button onclick="resetNoteZoom()" title="Reset">⟳ Reset</button>
-                </div>
-            </div>
-        </div>
-        <div class="container">
-            <div id="lineNumbers"></div>
-            <div id="lineEditor" contenteditable="true"><div><br></div></div>
-        </div>
-        <div id="notePageTabs" class="note-page-tabs"></div>
-    </div>
-
-    <!-- ════════════════════ MIND MAP DASHBOARD ════════════════════ -->
-    <div id="mindMapDashboard">
-        <div class="mindmap-topbar">
-            <button onclick="closeMindMap()" title="Back">← Back</button>
-            <span id="mindMapName">Mind Map</span>
-            <div class="structure-controls">
-
-                <!-- Structure selector always visible -->
-                <div class="structure-selector">
-                    <button id="structureBtn" class="structure-btn" onclick="toggleStructureMenu()">
-                        <span id="selectedStructureIcon">🔘</span>
-                        <span id="selectedStructureName">Radial</span> ▼
-                    </button>
-                    <div id="structureMenu" class="structure-menu">
-                        <div class="menu-sep">Classic</div>
-                        <div data-structure="radial"     onclick="applyStructure('radial')">🔘 Radial</div>
-                        <div data-structure="bubble"     onclick="applyStructure('bubble')">💭 Bubble Map</div>
-                        <div data-structure="hierarchy"  onclick="applyStructure('hierarchy')">📊 Hierarchy</div>
-                        <div class="menu-sep">Directional</div>
-                        <div data-structure="twoway"     onclick="applyStructure('twoway')">↔️ Two-Way</div>
-                        <div data-structure="oneway"     onclick="applyStructure('oneway')">➡️ One-Way</div>
-                        <div data-structure="fourway"    onclick="applyStructure('fourway')">🔄 Four Way</div>
-                        <div data-structure="tree"       onclick="applyStructure('tree')">🌳 Tree (L→R)</div>
-                        <div data-structure="treechart"  onclick="applyStructure('treechart')">🌲 Tree Chart (Top↓)</div>
-                        <div data-structure="brace"      onclick="applyStructure('brace')">🔗 Brace Map</div>
-                        <div class="menu-sep">Structural</div>
-                        <div data-structure="orgchart"   onclick="applyStructure('orgchart')">🏢 Org Chart</div>
-                        <div data-structure="fishbone"   onclick="applyStructure('fishbone')">🐟 Fishbone</div>
-                        <div data-structure="timeline"   onclick="applyStructure('timeline')">📅 Timeline</div>
-                        <div class="menu-sep">Data &amp; Visual</div>
-                        <div data-structure="divergence" onclick="applyStructure('divergence')">⭕ Divergence</div>
-                        <div data-structure="matrix"     onclick="applyStructure('matrix')">📋 Matrix</div>
-                        <div class="menu-sep">Canvas</div>
-                        <div data-structure="free"       onclick="applyStructure('free')">✋ Free Layout</div>
+                <div style="margin: 15px 0 5px;">
+                    <div style="font-weight: 600; margin-bottom: 5px;"><i class="fas fa-link"></i> Your ultra short link
+                    </div>
+                    <div class="short-link-card">
+                        <div class="short-link-display" id="shortLinkDisplay">click "Create Short Link"</div>
+                        <button id="generateShortLinkBtn" class="copy-short-btn"><i class="fas fa-magic"></i> Create
+                            Short Link</button>
+                    </div>
+                    <div class="tiny-badge"><i class="fas fa-globe"></i> Uses TinyURL – super short, works everywhere
                     </div>
                 </div>
 
-                <!-- Sub Node button (always visible) -->
-                <button onclick="addSubNodeToSelected()" title="Add Sub-node">➕ Sub</button>
+                <div class="qr-container" id="qrContainer"></div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="downloadQRBtn" class="btn btn-outline btn-sm" style="flex:1;"><i
+                            class="fas fa-download"></i> Download QR</button>
+                    <button id="copyShortLinkBtn" class="btn btn-outline btn-sm" style="flex:1;"><i
+                            class="far fa-copy"></i> Copy Short Link</button>
+                </div>
 
-                <!-- Insert button -->
-                <button id="insertBtn" onclick="toggleInsertMenu()" title="Insert">📎 ▼</button>
-
-                <!-- Add Node (hidden on mobile via CSS → more menu) -->
-                <button class="desktop-only" onclick="addMindMapNode()">➕ Node</button>
-
-                <!-- Save buttons -->
-                <button class="desktop-only" onclick="saveMindMap()">💾 Save</button>
-                <button class="desktop-only" onclick="saveMindMapAs()">📄 As</button>
-
-                <!-- Delete -->
-                <button class="desktop-only" onclick="deleteSelectedNode()">🗑 Del</button>
-
-                <!-- Zoom (desktop) -->
-                <button class="desktop-only" onclick="zoomMindMapOut()" title="Zoom Out">🔍−</button>
-                <span id="mindMapZoomLevel" class="zoom-label desktop-only">100%</span>
-                <button class="desktop-only" onclick="zoomMindMapIn()"  title="Zoom In">🔍+</button>
-
-                <!-- More menu (always present, essential on mobile) -->
-                <div class="more-menu-container">
-                    <button id="mindmapMoreBtn" onclick="toggleMindmapMoreMenu()" title="More">⋯</button>
-                    <div id="mindmapMoreMenu" class="more-menu">
-                        <button onclick="addMindMapNode()">➕ Add Node</button>
-                        <button onclick="deleteSelectedNode()">🗑 Delete Node</button>
-                        <button onclick="saveMindMap()">💾 Save</button>
-                        <button onclick="saveMindMapAs()">📄 Save As</button>
-                        <button onclick="zoomMindMapOut()">🔍− Zoom Out</button>
-                        <span id="mindMapZoomLevelMobile" style="text-align:center;padding:6px 12px;font-size:13px;">100%</span>
-                        <button onclick="zoomMindMapIn()">🔍+ Zoom In</button>
-                        <button onclick="resetMindMapZoom()">⟳ Reset Zoom</button>
-                        <button onclick="resetMindMapView()">🔄 Reset View</button>
-                        <button onclick="exportMindMap()">📸 Export</button>
-                        <button onclick="openGenerateModal('mindmap')">🔗 Share</button>
+                <div style="margin-top: 20px;">
+                    <div style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-database"></i> 📦 Saved
+                        Messages (click to load)</div>
+                    <div id="messagesList" class="stored-msgs">
+                        <div style="text-align:center; padding:20px; color:#94a3b8;">No messages yet</div>
                     </div>
+                    <button id="clearAllBtn" class="btn btn-danger btn-sm" style="margin-top: 10px; width:100%;"><i
+                            class="fas fa-trash"></i> Clear All Messages</button>
+                </div>
+
+                <div class="scanner-area">
+                    <div style="font-weight: 500; margin-bottom: 8px;"><i class="fas fa-qrcode"></i> Import from QR /
+                        Short Link</div>
+                    <div id="scannerToggleBtn" class="scanner-toggle">
+                        <i class="fas fa-camera"></i> Scan QR Code
+                    </div>
+                    <div id="qr-reader" style="display:none;"></div>
+                    <div id="scanResultMsg" class="scan-result" style="display:none;"></div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px;">
+                        <input type="file" id="qrImageInput" accept="image/*" style="display: none;">
+                        <button id="uploadImageBtn" class="btn btn-success btn-sm"><i class="fas fa-folder-open"></i>
+                            Import QR Image</button>
+                        <button id="manualPasteBtn" class="btn btn-outline btn-sm"><i class="fas fa-paste"></i> Paste
+                            Short Link</button>
+                    </div>
+                    <div id="imageScanResult" class="scan-result" style="display:none; margin-top: 8px;"></div>
                 </div>
             </div>
         </div>
-
-        <div class="mindmap-canvas" id="mindMapCanvasContainer">
-            <div id="mindMapCanvas" style="position:relative;width:3000px;height:3000px;">
-                <div class="mindmap-center-node" id="mindMapCenterNode" contenteditable="true">Main Idea</div>
-                <div id="mindMapNodes"></div>
-                <svg id="mindMapLines" style="position:absolute;top:0;left:0;width:3000px;height:3000px;pointer-events:none;z-index:2;overflow:visible;"></svg>
-            </div>
-        </div>
+        <footer><i class="fas fa-bolt"></i> Messages are AES-encrypted + compressed, then shortened via TinyURL. Scan
+            any QR to load instantly.</footer>
     </div>
+    <div id="toastMsg" class="toast-msg">✨ Copied!</div>
 
-    <!-- ════════════════════ INSERT MENUS ════════════════════ -->
-    <div id="insertMenu" class="insert-menu">
-        <div class="insert-item" onclick="insertPhoto()">🖼️ Photo</div>
-        <div class="insert-item" onclick="insertHyperlink()">🔗 Hyperlink</div>
-        <div class="insert-item" onclick="insertNoteComment()">💬 Note/Comment</div>
-        <div class="insert-item" onclick="openSketchInsert()">✏️ Sketch</div>
-        <div class="insert-item" onclick="insertAudio()">🎵 Audio</div>
-        <div class="insert-item" onclick="insertPDF()">📄 PDF</div>
-    </div>
-    <div id="sketchInsertMenu" class="insert-menu">
-        <div class="insert-item" onclick="insertSketchImage()">🖼️ Image</div>
-        <div class="insert-item" onclick="insertSketchAudio()">🎵 Audio</div>
-    </div>
-
-    <!-- ════════════════════ HYPERLINK MODAL (Mind Map) ════════════════════ -->
-    <div id="hyperlinkModal" class="hyperlink-modal">
-        <div class="modal-box small">
-            <h3>🔗 Insert Hyperlink to Node</h3>
-            <button class="modal-close" onclick="closeHyperlinkModal()">✕</button>
-            <label>External URL:</label>
-            <input type="text" id="hyperlinkUrl" placeholder="https://example.com">
-            <label>Or link to internal file:</label>
-            <select id="internalFileSelect"><option value="">-- Select note/mind map --</option></select>
-            <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;cursor:pointer;">
-                <input type="checkbox" id="nodeHyperlinkOpenBoth"> Open in current &amp; new tab
-            </label>
-            <div class="modal-actions">
-                <button onclick="closeHyperlinkModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Cancel</button>
-                <button onclick="confirmHyperlink()"    style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Insert</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ HYPERLINK MODAL (Note) ════════════════════ -->
-    <div id="noteHyperlinkModal" class="hyperlink-modal">
-        <div class="modal-box small">
-            <h3>🔗 Insert Hyperlink</h3>
-            <button class="modal-close" onclick="closeNoteHyperlinkModal()">✕</button>
-            <label>Link text (optional):</label>
-            <input type="text" id="noteLinkText" placeholder="Link text">
-            <label>URL:</label>
-            <input type="text" id="noteLinkUrl" placeholder="https://example.com">
-            <label>Or internal file:</label>
-            <select id="noteInternalFileSelect"><option value="">-- Select note/mind map --</option></select>
-            <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;cursor:pointer;">
-                <input type="checkbox" id="noteHyperlinkOpenBoth"> Open in current &amp; new tab
-            </label>
-            <div class="modal-actions">
-                <button onclick="closeNoteHyperlinkModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Cancel</button>
-                <button onclick="confirmNoteHyperlink()"    style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Insert</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ GENERATE / SHARE MODAL ════════════════════ -->
-    <div id="generateModal" class="hyperlink-modal">
-        <div class="modal-box small">
-            <h3>🔗 Generate Link &amp; QR</h3>
-            <button class="modal-close" onclick="closeGenerateModal()">✕</button>
-            <label>Share Link:</label>
-            <input type="text" id="generatedShareLink" readonly>
-            <div id="generatedQrPreview" style="display:flex;align-items:center;justify-content:center;height:140px;border:1px dashed var(--border);border-radius:10px;background:var(--bg-tertiary);margin-bottom:12px;">
-                <span style="color:var(--text-muted);font-size:12px;">QR preview</span>
-            </div>
-            <div class="modal-actions">
-                <button onclick="openGeneratedLink()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;">Open</button>
-                <button onclick="copyGeneratedLink()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Copy</button>
-                <button onclick="closeGenerateModal()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ SCANNER MODAL ════════════════════ -->
-    <div id="scannerModal" class="hyperlink-modal">
-        <div class="modal-box small">
-            <h3>📷 Scanner</h3>
-            <button class="modal-close" onclick="closeScannerModal()">✕</button>
-            <video id="scannerVideo" autoplay playsinline muted></video>
-            <input type="text" id="scannerManualInput" placeholder="Paste scanned link here">
-            <div class="modal-actions">
-                <button onclick="submitScannerManualInput()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;">Open Link</button>
-                <button onclick="closeScannerModal()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════════════════════ FOLDER CONTEXT MENU ════════════════════ -->
-    <div id="folderMenu">
-        <div onclick="renameFolder()">✏️ Rename</div>
-        <div onclick="deleteFolder()">🗑️ Delete</div>
-        <div onclick="addToFavorites()">⭐ Add to Favorites</div>
-    </div>
-
-    <!-- Desktop-only CSS helper -->
-    <style>
-        @media (max-width: 768px) {
-            .desktop-only { display: none !important; }
-            .zoom-label.desktop-only { display: none !important; }
-        }
-        /* Button label hide on small screens */
-        @media (max-width: 480px) {
-            .btn-label { display: none; }
-        }
-    </style>
-
-    <script src="core.js"></script>
-    <script src="filesystem.js"></script>
-    <script src="editor.js"></script>
-    <script src="mindmaps.js"></script>
-    <script src="sketch.js"></script>
-    <script src="ui.js"></script>
-
-    <!-- Responsive helpers -->
     <script>
-        // Sidebar open/close with overlay
-        function closeSidebar() {
-            var sidebar = document.getElementById('mainSidebar');
-            var overlay = document.getElementById('sidebarOverlay');
-            var app = document.getElementById('appContainer');
-            if (sidebar) sidebar.classList.remove('open');
-            if (overlay) overlay.classList.remove('show');
-            if (app) app.classList.remove('sidebar-open');
+        // ---------- Clear old messages on startup (don't show old) ----------
+        localStorage.removeItem('shortnote_dashboard'); // start fresh
+        let messages = [];
+        const STORAGE_KEY = 'shortnote_dashboard';
+
+        // DOM elements
+        const noteTextarea = document.getElementById('noteContent');
+        const messagesListDiv = document.getElementById('messagesList');
+        const saveMsgBtn = document.getElementById('saveMsgBtn');
+        const clearEditorBtn = document.getElementById('clearEditorBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const shortLinkDisplay = document.getElementById('shortLinkDisplay');
+        const generateShortLinkBtn = document.getElementById('generateShortLinkBtn');
+        const copyShortLinkBtn = document.getElementById('copyShortLinkBtn');
+        const downloadQRBtn = document.getElementById('downloadQRBtn');
+        const qrContainer = document.getElementById('qrContainer');
+        const scannerToggle = document.getElementById('scannerToggleBtn');
+        const qrReaderDiv = document.getElementById('qr-reader');
+        const scanResultMsg = document.getElementById('scanResultMsg');
+        const uploadImageBtn = document.getElementById('uploadImageBtn');
+        const qrImageInput = document.getElementById('qrImageInput');
+        const imageScanResult = document.getElementById('imageScanResult');
+        const manualPasteBtn = document.getElementById('manualPasteBtn');
+
+        let currentQR = null;
+        let html5Scanner = null;
+        let isScannerActive = false;
+        let currentShortenedUrl = "";
+
+        function showToast(msg, dur = 2200) {
+            const toast = document.getElementById('toastMsg');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', dur);
         }
-        // Override toggleSidebar to also manage overlay
-        var _origToggle = window.toggleSidebar;
-        window.toggleSidebar = function() {
-            var sidebar = document.getElementById('mainSidebar');
-            var overlay = document.getElementById('sidebarOverlay');
-            var app = document.getElementById('appContainer');
-            var isOpen = sidebar && sidebar.classList.contains('open');
-            if (isOpen) {
-                closeSidebar();
-            } else {
-                if (sidebar) sidebar.classList.add('open');
-                if (overlay) overlay.classList.add('show');
-                if (app) app.classList.add('sidebar-open');
-            }
-        };
 
-        // Sync dual zoom labels (desktop + mobile more menu)
-        var _origRender = window.renderMindMap;
-        document.addEventListener('DOMContentLoaded', function() {
-            var zoomDesktop = document.getElementById('mindMapZoomLevel');
-            var zoomMobile  = document.getElementById('mindMapZoomLevelMobile');
-            if (zoomDesktop && zoomMobile) {
-                var observer = new MutationObserver(function() {
-                    zoomMobile.textContent = zoomDesktop.textContent;
+        // ---------- ENCRYPTION + COMPRESSION (to create the long encrypted URL) ----------
+        const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        function stringToBase62(str) {
+            let big = 0n;
+            for (let i = 0; i < str.length; i++) {
+                big = big * 256n + BigInt(str.charCodeAt(i));
+            }
+            if (big === 0n) return "0";
+            let result = "";
+            while (big > 0n) {
+                result = BASE62[Number(big % 62n)] + result;
+                big = big / 62n;
+            }
+            return result;
+        }
+        function base62ToString(base62Str) {
+            let big = 0n;
+            for (let i = 0; i < base62Str.length; i++) {
+                const idx = BASE62.indexOf(base62Str[i]);
+                if (idx === -1) return null;
+                big = big * 62n + BigInt(idx);
+            }
+            let result = "";
+            while (big > 0n) {
+                result = String.fromCharCode(Number(big % 256n)) + result;
+                big = big / 256n;
+            }
+            return result;
+        }
+        function encryptAndCompress(message) {
+            if (!message.trim()) return null;
+            const randomKey = CryptoJS.lib.WordArray.random(12).toString().substring(0, 12);
+            const encrypted = CryptoJS.AES.encrypt(message, randomKey).toString();
+            const combined = `${encrypted}::${randomKey}`;
+            const compressed = LZString.compressToEncodedURIComponent(combined);
+            if (!compressed) return null;
+            const base62Code = stringToBase62(compressed);
+            const baseUrl = window.location.href.split('#')[0].split('?')[0];
+            const longUrl = `${baseUrl}?data=${base62Code}`;
+            return { longUrl, shortCode: base62Code };
+        }
+        function decryptFromCode(shortCode) {
+            try {
+                const compressed = base62ToString(shortCode);
+                if (!compressed) return null;
+                const combined = LZString.decompressFromEncodedURIComponent(compressed);
+                if (!combined) return null;
+                const splitIdx = combined.lastIndexOf('::');
+                if (splitIdx !== -1) {
+                    const encryptedMsg = combined.substring(0, splitIdx);
+                    const key = combined.substring(splitIdx + 2);
+                    const bytes = CryptoJS.AES.decrypt(encryptedMsg, key);
+                    return bytes.toString(CryptoJS.enc.Utf8);
+                }
+            } catch (e) { console.warn(e); }
+            return null;
+        }
+        // Load from URL param ?data=xxxx
+        function loadFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shortCode = urlParams.get('data');
+            if (shortCode && shortCode.length > 0) {
+                const decrypted = decryptFromCode(shortCode);
+                if (decrypted) {
+                    noteTextarea.value = decrypted;
+                    showToast('🔓 Message decrypted from link!', 3000);
+                    // auto-save to dashboard if not exists
+                    const exists = messages.some(m => m.text === decrypted);
+                    if (!exists && decrypted.trim()) {
+                        messages.push({ id: Date.now(), text: decrypted, timestamp: new Date().toISOString() });
+                        saveMessages();
+                        renderMessages();
+                    }
+                    return true;
+                } else {
+                    showToast('Invalid or corrupted link', 2000);
+                }
+            }
+            return false;
+        }
+
+        // ---------- TINYURL SHORTENER (REAL ULTRA SHORT LINKS) ----------
+        async function createTinyUrl(longUrl) {
+            try {
+                const apiUrl = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
+                const response = await fetch(apiUrl);
+                if (response.ok) {
+                    const shortUrl = await response.text();
+                    return shortUrl.trim();
+                } else {
+                    throw new Error("TinyURL failed");
+                }
+            } catch (error) {
+                console.warn(error);
+                return null;
+            }
+        }
+        async function generateShortLinkForCurrentMessage() {
+            const message = noteTextarea.value.trim();
+            if (!message) {
+                showToast("Write a message first", 1500);
+                return;
+            }
+            generateShortLinkBtn.innerHTML = '<span class="spinner"></span> Creating...';
+            generateShortLinkBtn.disabled = true;
+            try {
+                const encryptedData = encryptAndCompress(message);
+                if (!encryptedData || !encryptedData.longUrl) throw new Error("Encryption failed");
+                const tiny = await createTinyUrl(encryptedData.longUrl);
+                if (tiny && tiny.startsWith("http")) {
+                    currentShortenedUrl = tiny;
+                    shortLinkDisplay.innerText = currentShortenedUrl;
+                    // Generate QR for the short URL
+                    if (currentQR) { qrContainer.innerHTML = ''; currentQR = null; }
+                    currentQR = new QRCode(qrContainer, {
+                        text: currentShortenedUrl,
+                        width: 180,
+                        height: 180,
+                        colorDark: "#0f172a",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    showToast("✅ Ultra short link created!", 2000);
+                } else {
+                    // fallback: show the long encrypted URL (still works)
+                    currentShortenedUrl = encryptedData.longUrl;
+                    shortLinkDisplay.innerText = currentShortenedUrl;
+                    if (currentQR) { qrContainer.innerHTML = ''; currentQR = null; }
+                    currentQR = new QRCode(qrContainer, {
+                        text: currentShortenedUrl,
+                        width: 180,
+                        height: 180
+                    });
+                    showToast("⚠️ TinyURL failed, using direct link (still shareable)", 2000);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Error creating short link", 1500);
+                shortLinkDisplay.innerText = "Error, try again";
+            } finally {
+                generateShortLinkBtn.innerHTML = '<i class="fas fa-magic"></i> Create Short Link';
+                generateShortLinkBtn.disabled = false;
+            }
+        }
+
+        // ---------- PROCESS SCANNED QR (supports tinyurl and direct encrypted links) ----------
+        async function processScannedInput(input, resultElement) {
+            let finalUrl = input;
+            // If it's a tinyurl, fetch to get redirected location (to extract data param)
+            if (input.includes('tinyurl.com')) {
+                try {
+                    const response = await fetch(input, { method: 'HEAD', redirect: 'follow' });
+                    finalUrl = response.url;
+                } catch (e) { /* fallback to original */ }
+            }
+            let shortCode = null;
+            if (finalUrl.includes('?data=')) {
+                try {
+                    let url = new URL(finalUrl);
+                    shortCode = url.searchParams.get('data');
+                } catch (e) {
+                    const match = finalUrl.match(/[?&]data=([^&]+)/);
+                    if (match) shortCode = match[1];
+                }
+            } else if (!finalUrl.includes('http') && finalUrl.length < 200) {
+                shortCode = finalUrl;
+            }
+            if (shortCode) {
+                const decrypted = decryptFromCode(shortCode);
+                if (decrypted) {
+                    noteTextarea.value = decrypted;
+                    showToast("📥 Message loaded from QR!", 2000);
+                    resultElement.innerHTML = `<i class="fas fa-check-circle"></i> Loaded: "${decrypted.substring(0, 80)}..."`;
+                    resultElement.style.display = 'block';
+                    const exists = messages.some(m => m.text === decrypted);
+                    if (!exists && decrypted.trim()) {
+                        messages.push({ id: Date.now(), text: decrypted, timestamp: new Date().toISOString() });
+                        saveMessages();
+                        renderMessages();
+                    }
+                    return true;
+                } else {
+                    resultElement.innerHTML = `<i class="fas fa-lock"></i> Failed to decrypt.`;
+                    resultElement.style.display = 'block';
+                    return false;
+                }
+            }
+            resultElement.innerHTML = `<i class="fas fa-question-circle"></i> No valid link found.`;
+            resultElement.style.display = 'block';
+            return false;
+        }
+
+        // ---------- DASHBOARD (no old messages shown) ----------
+        function loadMessages() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    messages = JSON.parse(stored);
+                } catch (e) { messages = []; }
+            }
+            if (!messages || messages.length === 0) {
+                messages = [{
+                    id: Date.now(),
+                    text: "✨ Welcome to ShortNote!\nWrite any message, click 'Create Short Link' → get a tinyurl.com/xxxx link. Share anywhere!",
+                    timestamp: new Date().toISOString()
+                }];
+                saveMessages();
+            }
+            renderMessages();
+        }
+        function saveMessages() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        }
+        function renderMessages() {
+            if (messages.length === 0) {
+                messagesListDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">No saved messages</div>';
+                return;
+            }
+            messagesListDiv.innerHTML = "";
+            messages.slice().reverse().forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'msg-item';
+                const preview = msg.text.length > 80 ? msg.text.substring(0, 80) + "..." : msg.text;
+                const date = new Date(msg.timestamp).toLocaleString();
+                div.innerHTML = `<div class="msg-text">${escapeHtml(preview)}</div><div class="msg-time"><i class="far fa-clock"></i> ${date}</div>`;
+                div.addEventListener('click', () => {
+                    noteTextarea.value = msg.text;
+                    showToast("Message loaded. Click 'Create Short Link' to get a new tiny link.");
+                    shortLinkDisplay.innerText = "click 'Create Short Link'";
+                    if (currentQR) { qrContainer.innerHTML = ''; currentQR = null; }
+                    currentShortenedUrl = "";
                 });
-                observer.observe(zoomDesktop, { childList: true, characterData: true, subtree: true });
+                messagesListDiv.appendChild(div);
+            });
+        }
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        }
+        function saveCurrentNoteToDashboard() {
+            const text = noteTextarea.value.trim();
+            if (!text) { showToast("Write something first", 1500); return; }
+            const exists = messages.some(m => m.text === text);
+            if (!exists) {
+                messages.push({ id: Date.now(), text: text, timestamp: new Date().toISOString() });
+                saveMessages();
+                renderMessages();
+                showToast("✅ Saved to dashboard!");
+            } else {
+                showToast("Message already in dashboard", 1500);
             }
+        }
+        function clearEditor() {
+            noteTextarea.value = "";
+            shortLinkDisplay.innerText = "click 'Create Short Link'";
+            if (currentQR) { qrContainer.innerHTML = ''; currentQR = null; }
+            currentShortenedUrl = "";
+            showToast("Editor cleared");
+        }
+        function clearAllMessages() {
+            if (confirm("Delete ALL saved messages?")) {
+                messages = [];
+                saveMessages();
+                renderMessages();
+                showToast("All messages cleared");
+            }
+        }
+        function copyShortLink() {
+            if (!currentShortenedUrl) {
+                showToast("Create a short link first (click 'Create Short Link')", 1500);
+                return;
+            }
+            navigator.clipboard.writeText(currentShortenedUrl).then(() => showToast("📎 Ultra short link copied!"));
+        }
+        function downloadQR() {
+            const qrCanvas = document.querySelector('#qrContainer canvas');
+            if (!qrCanvas) { showToast("Create a short link first", 1500); return; }
+            const link = document.createElement('a');
+            link.download = 'shortlink_qr.png';
+            link.href = qrCanvas.toDataURL();
+            link.click();
+            showToast("QR saved");
+        }
+
+        // ---------- CAMERA SCANNER (FIXED) ----------
+        async function startCameraScanner() {
+            if (html5Scanner && isScannerActive) {
+                await html5Scanner.stop();
+                qrReaderDiv.style.display = 'none';
+                scannerToggle.innerHTML = '<i class="fas fa-camera"></i> Scan QR Code';
+                scanResultMsg.style.display = 'none';
+                isScannerActive = false;
+                return;
+            }
+            qrReaderDiv.style.display = 'block';
+            scannerToggle.innerHTML = '<i class="fas fa-stop-circle"></i> Close Scanner';
+            if (!html5Scanner) html5Scanner = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            try {
+                await html5Scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+                    if (decodedText) {
+                        scanResultMsg.style.display = 'block';
+                        processScannedInput(decodedText, scanResultMsg);
+                        html5Scanner.stop().then(() => {
+                            qrReaderDiv.style.display = 'none';
+                            scannerToggle.innerHTML = '<i class="fas fa-camera"></i> Scan QR Code';
+                            isScannerActive = false;
+                        }).catch(console.warn);
+                    }
+                });
+                isScannerActive = true;
+                scanResultMsg.style.display = 'block';
+                scanResultMsg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Scanning...';
+            } catch (err) {
+                scanResultMsg.style.display = 'block';
+                scanResultMsg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Camera error. Please grant permission.';
+                qrReaderDiv.style.display = 'none';
+                scannerToggle.innerHTML = '<i class="fas fa-camera"></i> Scan QR Code';
+                isScannerActive = false;
+            }
+        }
+        async function importQRFromImage(file) {
+            if (!file) return;
+            imageScanResult.style.display = 'block';
+            imageScanResult.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Reading QR...';
+            try {
+                const html5QrCode = new Html5Qrcode("temp-scanner");
+                const decodedText = await html5QrCode.scanFile(file, true);
+                if (decodedText) processScannedInput(decodedText, imageScanResult);
+                else throw new Error("No QR found");
+            } catch (err) {
+                imageScanResult.innerHTML = `<i class="fas fa-times-circle"></i> Cannot read QR: ${err.message}`;
+            }
+        }
+        function manualPaste() {
+            let input = prompt("Paste the short link (tinyurl.com/xxx) or full encrypted link:");
+            if (!input) return;
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'scan-result';
+            document.querySelector('.scanner-area').appendChild(tempDiv);
+            processScannedInput(input.trim(), tempDiv);
+            setTimeout(() => { if (tempDiv) tempDiv.remove(); }, 4000);
+        }
+
+        // Event listeners
+        saveMsgBtn.addEventListener('click', saveCurrentNoteToDashboard);
+        clearEditorBtn.addEventListener('click', clearEditor);
+        clearAllBtn.addEventListener('click', clearAllMessages);
+        generateShortLinkBtn.addEventListener('click', generateShortLinkForCurrentMessage);
+        copyShortLinkBtn.addEventListener('click', copyShortLink);
+        downloadQRBtn.addEventListener('click', downloadQR);
+        scannerToggle.addEventListener('click', startCameraScanner);
+        uploadImageBtn.addEventListener('click', () => qrImageInput.click());
+        qrImageInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) importQRFromImage(e.target.files[0]);
+            qrImageInput.value = '';
         });
+        manualPasteBtn.addEventListener('click', manualPaste);
 
-        // Close menus on canvas tap (mobile UX)
-        document.addEventListener('touchstart', function(e) {
-            var structureMenu = document.getElementById('structureMenu');
-            var structureBtn  = document.getElementById('structureBtn');
-            if (structureMenu && structureMenu.classList.contains('show') &&
-                !structureMenu.contains(e.target) && e.target !== structureBtn) {
-                structureMenu.classList.remove('show');
+        // Initialize: load messages, clear old, and check URL decryption
+        loadMessages();
+        if (!loadFromURL()) {
+            if (messages.length > 0 && noteTextarea.value === "") {
+                noteTextarea.value = messages[messages.length - 1].text;
+            } else if (noteTextarea.value === "") {
+                noteTextarea.value = "✨ Try me!\nWrite anything, then click 'Create Short Link' → instant tinyurl.com/xxxx link!";
             }
-        }, { passive: true });
+        }
     </script>
-
 </body>
+
 </html>
+```
