@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MsgLink — Share Messages via QR & Links</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root {
+    --bg:        #0c0e14;
+    --surface:   #141720;
+    --surface2:  #1c2030;
+    --border:    #252a3a;
+    --accent:    #f0a500;
+    --accent2:   #e05c5c;
+    --blue:      #4d9de0;
+    --green:     #3ecf8e;
+    --text:      #e8eaf2;
+    --text-dim:  #7a7f99;
+    --text-faint:#3d4260;
+    --radius:    14px;
+    --mono:      'DM Mono', monospace;
+    --sans:      'DM Sans', sans-serif;
+    --display:   'Syne', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-dot { color: var(--accent); }
+  .logo svg { width: 28px; height: 28px; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* ── PERSONA TOGGLE ─────────────────────────────── */
+  .persona-toggle {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .persona-btn {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .persona-btn.active-a { background: var(--accent); color: #0c0e14; }
+  .persona-btn.active-b { background: var(--blue); color: #0c0e14; }
+
+  /* ── BUTTONS ────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--border); border-color: var(--text-dim); }
+  .btn-danger { border-color: #e05c5c44; color: var(--accent2); }
+  .btn-danger:hover { background: #e05c5c22; }
+  .btn-accent { background: var(--accent); color: #0c0e14; border-color: var(--accent); font-weight: 600; }
+  .btn-accent:hover { filter: brightness(1.1); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
+  .btn-icon { padding: 7px; border-radius: 9px; }
+
+  /* ── MAIN LAYOUT ────────────────────────────────── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── CHAT PANEL ─────────────────────────────────── */
+  .chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid var(--border);
+  }
+
+  /* ── MESSAGES ───────────────────────────────────── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .messages::-webkit-scrollbar { width: 5px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  .day-label {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    margin: 10px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .msg-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+  .msg-group.from-a { align-items: flex-start; }
+  .msg-group.from-b { align-items: flex-end; }
+
+  .msg-label {
+    font-size: 11px;
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+    padding: 0 4px;
+  }
+  .from-a .msg-label { color: var(--accent); }
+  .from-b .msg-label { color: var(--blue); }
+
+  .msg-imported-tag {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--green);
+    margin-bottom: 3px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bubble {
+    max-width: min(76%, 520px);
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    position: relative;
+    word-break: break-word;
+  }
+  .from-a .bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+    color: var(--text);
+  }
+  .from-b .bubble {
+    background: linear-gradient(135deg, #1e2d4a 0%, #1a2540 100%);
+    border: 1px solid #2d4070;
+    border-top-right-radius: 4px;
+    color: var(--text);
+  }
+  .bubble.imported {
+    border-style: dashed;
+  }
+  .from-a .bubble.imported { border-color: #3ecf8e55; background: #0d1f18; }
+  .from-b .bubble.imported { border-color: #3ecf8e55; background: #0d1f18; }
+
+  .msg-time {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-faint);
+    padding: 0 4px;
+    margin-top: 2px;
+  }
+
+  /* share row under bubble */
+  .share-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px 2px;
+    margin-top: 4px;
+  }
+  .short-link {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--accent);
+    text-decoration: none;
+    background: #1a150a;
+    border: 1px solid #3a2c0a;
+    border-radius: 6px;
+    padding: 3px 8px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .short-link:hover { text-decoration: underline; }
+
+  /* ── QR PANEL (side) ────────────────────────────── */
+  .qr-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .qr-sidebar::-webkit-scrollbar { width: 4px; }
+  .qr-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  .qr-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .qr-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    font-size: 13px;
+    gap: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .qr-card {
+    margin: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .qr-card-label {
+    font-family: var(--display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qr-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-box canvas { display: block !important; }
+  .qr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ── INPUT AREA ─────────────────────────────────── */
+  .input-area {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .msg-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14.5px;
+    resize: none;
+    outline: none;
+    min-height: 42px;
+    max-height: 120px;
+    transition: border-color 0.18s;
+    line-height: 1.5;
+  }
+  .msg-input:focus { border-color: var(--accent); }
+  .msg-input::placeholder { color: var(--text-faint); }
+  .send-btn {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: #0c0e14;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+    font-size: 18px;
+  }
+  .send-btn:hover { filter: brightness(1.12); transform: scale(1.05); }
+  .send-btn:active { transform: scale(0.97); }
+
+  /* Import link row */
+  .import-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .import-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .import-input:focus { border-color: var(--blue); }
+  .import-input::placeholder { color: var(--text-faint); }
+
+  /* ── MODALS ─────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    width: min(94vw, 440px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transform: translateY(16px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .modal-body { display: flex; flex-direction: column; gap: 12px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+  #camera-feed { width: 100%; border-radius: 10px; background: #000; display: block; }
+  #scan-canvas { display: none; }
+  .scan-status { font-family: var(--mono); font-size: 12px; color: var(--text-dim); text-align: center; }
+  .scan-status.found { color: var(--green); }
+
+  /* file upload area */
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .file-drop:hover { border-color: var(--blue); color: var(--blue); }
+  .file-drop input { display: none; }
+
+  /* ── TOASTS ─────────────────────────────────────── */
+  #toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 300px;
+    animation: slideIn 0.25s ease;
+    pointer-events: all;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--accent2); }
+  .toast.info    { border-left: 3px solid var(--blue); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; transform: translateY(8px); } }
+
+  /* ── SEPARATOR ──────────────────────────────────── */
+  .import-separator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 4px 0;
+  }
+  .import-separator::before,
+  .import-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .import-badge {
+    font-size: 9.5px;
+    font-family: var(--mono);
+    color: var(--green);
+    background: #0d1f18;
+    border: 1px dashed #3ecf8e55;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── RESPONSIVE ─────────────────────────────────── */
+  @media (max-width: 700px) {
+    .qr-sidebar { display: none; }
+    .chat-panel { border-right: none; }
+  }
+  @media (max-width: 480px) {
+    header { padding: 10px 14px; }
+    .messages { padding: 14px 10px; }
+    .input-area { padding: 10px 12px; }
+  }
+
+  /* ── MISC ───────────────────────────────────────── */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    gap: 10px;
+    padding: 30px;
+    text-align: center;
+  }
+  .empty-state svg { opacity: 0.2; }
+  .empty-state p { font-size: 13px; line-height: 1.7; }
+
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .divider-imported {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-family: var(--mono);
+    color: var(--green); margin: 6px 0; opacity: 0.7;
+  }
+  .divider-imported::before, .divider-imported::after {
+    content: ''; flex: 1; height: 1px; background: #3ecf8e33;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="11" height="11" rx="2" fill="var(--accent)" opacity="0.9"/>
+      <rect x="15" y="2" width="11" height="11" rx="2" fill="var(--accent)" opacity="0.4"/>
+      <rect x="2" y="15" width="11" height="11" rx="2" fill="var(--accent)" opacity="0.4"/>
+      <rect x="17" y="17" width="7" height="7" rx="1" fill="var(--accent)" opacity="0.9"/>
+      <rect x="15" y="15" width="4" height="4" rx="0.5" fill="var(--accent)" opacity="0.6"/>
+    </svg>
+    Msg<span class="logo-dot">Link</span>
+  </div>
+
+  <div class="header-actions">
+    <div class="persona-toggle">
+      <button class="persona-btn active-a" id="btnA" onclick="switchPersona('A')">Person A</button>
+      <button class="persona-btn" id="btnB" onclick="switchPersona('B')">Person B</button>
+    </div>
+    <button class="btn" onclick="openQRModal()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="17" y="17" width="4" height="4"/></svg>
+      Import QR
+    </button>
+    <button class="btn btn-danger" onclick="clearChat()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Clear
+    </button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CHAT PANEL -->
+  <div class="chat-panel">
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p>No messages yet.<br>Type below or import a link / QR code.</p>
+      </div>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="msg-input" id="msgInput" rows="1"
+          placeholder="Type a message as Person A…"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendMessage()" title="Send (Ctrl+Enter)">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="import-separator">import message</div>
+
+      <div class="import-row">
+        <input class="import-input" id="importInput" type="text" placeholder="Paste short link or full URL…" onkeydown="if(event.key==='Enter') importFromLink()">
+        <button class="btn btn-sm" onclick="importFromLink()">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Import Link
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR SIDEBAR -->
+  <div class="qr-sidebar" id="qrSidebar">
+    <div class="qr-header">Latest QR Code</div>
+    <div class="qr-empty" id="qrEmpty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="17" y="17" width="4" height="4"/>
+      </svg>
+      <span>Send a message to generate a shareable QR code</span>
+    </div>
+    <div id="qrCardContainer"></div>
+  </div>
+</div>
+
+<!-- QR SCAN MODAL -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal">
+    <div class="modal-title">📷 Import via QR Code</div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:4px;">
+        <button class="btn btn-sm" id="btnCamera" onclick="startCamera()" style="flex:1">Use Camera</button>
+        <button class="btn btn-sm" id="btnFile" onclick="document.getElementById('qrFileInput').click()" style="flex:1">Upload Image</button>
+        <input type="file" id="qrFileInput" accept="image/*" style="display:none" onchange="handleQRFile(this)">
+      </div>
+      <video id="camera-feed" autoplay playsinline muted></video>
+      <canvas id="scan-canvas"></canvas>
+      <div class="scan-status" id="scanStatus">Choose an option above to scan or upload a QR code.</div>
+      <div class="file-drop" id="fileDrop" onclick="document.getElementById('qrFileInput').click()" style="display:none">
+        <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Click to select a QR code image
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeQRModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR CONFIRM MODAL -->
+<div class="modal-overlay" id="clearModal">
+  <div class="modal">
+    <div class="modal-title">🗑️ Clear Conversation?</div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);font-size:14px;">This will permanently delete all messages and stored link data. This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeClearModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmClear()">Yes, Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentPersona = 'A';
+let messages = [];       // [{id, from, text, time, key, imported}]
+let msgStore  = {};      // {key: text}  – short link store
+let latestQRKey = null;
+let cameraStream = null;
+let scanInterval = null;
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  loadFromStorage();
+  renderMessages();
+  checkURLHash();
+});
+
+window.addEventListener('hashchange', checkURLHash);
+
+/* ═══════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════ */
+function saveToStorage() {
+  localStorage.setItem('msglink_messages', JSON.stringify(messages));
+  localStorage.setItem('msglink_store',    JSON.stringify(msgStore));
+}
+function loadFromStorage() {
+  try {
+    messages  = JSON.parse(localStorage.getItem('msglink_messages') || '[]');
+    msgStore  = JSON.parse(localStorage.getItem('msglink_store')    || '{}');
+  } catch(e) { messages = []; msgStore = {}; }
+}
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function randomKey(len=6) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let k = '';
+  while (k.length < len || msgStore[k]) {
+    k = Array.from({length: len}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  }
+  return k;
+}
+function buildShortLink(key) {
+  return location.origin + location.pathname + '#msg_' + key;
+}
+function extractKey(urlOrHash) {
+  const m = urlOrHash.match(/#?msg_([a-z0-9]{4,12})/i);
+  return m ? m[1] : null;
+}
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDay(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  const yest = new Date(today); yest.setDate(yest.getDate()-1);
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'});
+}
+
+/* ═══════════════════════════════════════════
+   SEND MESSAGE
+═══════════════════════════════════════════ */
+function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  const key  = randomKey();
+  const time = Date.now();
+  const msg  = { id: 'msg_'+key, from: currentPersona, text, time, key, imported: false };
+
+  msgStore[key]  = text;
+  messages.push(msg);
+  saveToStorage();
+
+  input.value = '';
+  input.style.height = '';
+
+  renderMessages(msg.id);
+  generateQRCard(key, text, currentPersona);
+  latestQRKey = key;
+}
+
+function handleKey(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault(); sendMessage();
+  }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+/* ═══════════════════════════════════════════
+   PERSONA
+═══════════════════════════════════════════ */
+function switchPersona(p) {
+  currentPersona = p;
+  document.getElementById('btnA').className = 'persona-btn' + (p==='A'?' active-a':'');
+  document.getElementById('btnB').className = 'persona-btn' + (p==='B'?' active-b':'');
+  const ph = `Type a message as Person ${p}…`;
+  document.getElementById('msgInput').placeholder = ph;
+}
+
+/* ═══════════════════════════════════════════
+   RENDER MESSAGES
+═══════════════════════════════════════════ */
+function renderMessages(scrollToId) {
+  const container = document.getElementById('messages');
+  const empty     = document.getElementById('emptyState');
+
+  if (messages.length === 0) {
+    empty.style.display = '';
+    // clear everything except emptyState
+    [...container.children].forEach(c => { if (c !== empty) c.remove(); });
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Rebuild DOM
+  [...container.children].forEach(c => { if (c !== empty) c.remove(); });
+
+  let lastDay = null;
+  let lastFrom = null;
+  let currentGroup = null;
+
+  messages.forEach(msg => {
+    const day = fmtDay(msg.time);
+    if (day !== lastDay) {
+      const dl = document.createElement('div');
+      dl.className = 'day-label'; dl.textContent = day;
+      container.appendChild(dl);
+      lastDay = day; lastFrom = null; currentGroup = null;
+    }
+
+    // imported separator
+    if (msg.imported) {
+      const sep = document.createElement('div');
+      sep.className = 'divider-imported';
+      sep.textContent = '↓ imported message';
+      container.appendChild(sep);
+      lastFrom = null; currentGroup = null;
+    }
+
+    if (msg.from !== lastFrom || msg.imported) {
+      currentGroup = document.createElement('div');
+      currentGroup.className = `msg-group from-${msg.from.toLowerCase()}`;
+      const lbl = document.createElement('div');
+      lbl.className = 'msg-label';
+      lbl.textContent = `Person ${msg.from}`;
+      currentGroup.appendChild(lbl);
+      if (msg.imported) {
+        const tag = document.createElement('div');
+        tag.className = 'msg-imported-tag';
+        tag.innerHTML = `<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> via link/QR`;
+        currentGroup.appendChild(tag);
+      }
+      container.appendChild(currentGroup);
+      lastFrom = msg.from;
+    }
+
+    // Bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (msg.imported ? ' imported' : '');
+    bubble.id = msg.id;
+    bubble.textContent = msg.text;
+    currentGroup.appendChild(bubble);
+
+    // Time
+    const t = document.createElement('div');
+    t.className = 'msg-time'; t.textContent = fmtTime(msg.time);
+    currentGroup.appendChild(t);
+
+    // Share row
+    if (!msg.imported) {
+      const link = buildShortLink(msg.key);
+      const row  = document.createElement('div');
+      row.className = 'share-row';
+
+      const a = document.createElement('a');
+      a.className = 'short-link'; a.href = link; a.target = '_blank';
+      a.title = link; a.textContent = '#msg_' + msg.key;
+      row.appendChild(a);
+
+      row.appendChild(makeBtn('Copy', '📋', () => copyText(link, 'Link copied!')));
+      row.appendChild(makeBtn('QR', '◫',   () => focusSidebarQR(msg.key, msg.text, msg.from)));
+      currentGroup.appendChild(row);
+    }
+  });
+
+  // Scroll
+  if (scrollToId) {
+    const el = document.getElementById(scrollToId);
+    if (el) el.scrollIntoView({behavior:'smooth', block:'end'});
+  } else {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function makeBtn(label, icon, fn) {
+  const b = document.createElement('button');
+  b.className = 'btn btn-sm';
+  b.innerHTML = `<span style="font-size:11px">${icon}</span> ${label}`;
+  b.onclick = fn; return b;
+}
+
+/* ═══════════════════════════════════════════
+   QR SIDEBAR
+═══════════════════════════════════════════ */
+function generateQRCard(key, text, from) {
+  const link  = buildShortLink(key);
+  const empty = document.getElementById('qrEmpty');
+  const cont  = document.getElementById('qrCardContainer');
+  empty.style.display = 'none';
+
+  // Clear old
+  cont.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'qr-card';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'qr-card-label';
+  lbl.innerHTML = `<span>Person ${from} — #${key}</span>`;
+  card.appendChild(lbl);
+
+  const box = document.createElement('div');
+  box.className = 'qr-box';
+  const qrDiv = document.createElement('div');
+  box.appendChild(qrDiv); card.appendChild(box);
+
+  new QRCode(qrDiv, {
+    text: link, width: 200, height: 200,
+    colorDark:'#000000', colorLight:'#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  const preview = document.createElement('div');
+  preview.style.cssText = 'font-size:12px;color:var(--text-dim);word-break:break-all;font-family:var(--mono);background:var(--bg);padding:6px 8px;border-radius:6px;border:1px solid var(--border)';
+  preview.textContent = text.length > 60 ? text.slice(0,57)+'…' : text;
+  card.appendChild(preview);
+
+  const acts = document.createElement('div');
+  acts.className = 'qr-actions';
+
+  const copyLinkBtn = document.createElement('button');
+  copyLinkBtn.className = 'btn btn-sm';
+  copyLinkBtn.innerHTML = '📋 Copy Link';
+  copyLinkBtn.onclick = () => copyText(link, 'Link copied!');
+  acts.appendChild(copyLinkBtn);
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-sm';
+  dlBtn.innerHTML = '⬇ Download QR';
+  dlBtn.onclick = () => downloadQR(qrDiv, key);
+  acts.appendChild(dlBtn);
+
+  card.appendChild(acts);
+  cont.appendChild(card);
+}
+
+function focusSidebarQR(key, text, from) {
+  generateQRCard(key, text, from);
+  document.getElementById('qrSidebar').scrollTop = 0;
+}
+
+function downloadQR(qrDiv, key) {
+  const canvas = qrDiv.querySelector('canvas');
+  if (!canvas) { showToast('QR not ready yet.','error'); return; }
+  const a  = document.createElement('a');
+  a.download = `msglink-${key}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  showToast('QR downloaded!','success');
+}
+
+/* ═══════════════════════════════════════════
+   IMPORT FROM LINK
+═══════════════════════════════════════════ */
+function importFromLink() {
+  const raw = document.getElementById('importInput').value.trim();
+  if (!raw) { showToast('Paste a link first.','error'); return; }
+  const key = extractKey(raw);
+  if (!key) { showToast('Could not find a message key in that link.','error'); return; }
+  doImport(key);
+  document.getElementById('importInput').value = '';
+}
+
+function checkURLHash() {
+  const hash = location.hash;
+  if (!hash) return;
+  const key = extractKey(hash);
+  if (!key) return;
+  // clear hash
+  history.replaceState(null, '', location.pathname + location.search);
+  doImport(key);
+}
+
+function doImport(key) {
+  // Already imported?
+  if (messages.some(m => m.key === key && m.imported)) {
+    showToast('This message is already in the conversation.','info'); return;
+  }
+  const text = msgStore[key];
+  if (!text) { showToast('Link expired or not found on this device.','error'); return; }
+
+  const fromMe = messages.some(m => m.key === key && !m.imported);
+  const importAs = fromMe ? (currentPersona === 'A' ? 'B' : 'A') : (currentPersona === 'A' ? 'B' : 'A');
+
+  const msg = {
+    id: 'imp_'+key, from: importAs,
+    text, time: Date.now(),
+    key, imported: true
+  };
+  messages.push(msg);
+  saveToStorage();
+  renderMessages(msg.id);
+  showToast('✅ Message imported from link/QR','success');
+}
+
+/* ═══════════════════════════════════════════
+   QR SCAN MODAL
+═══════════════════════════════════════════ */
+function openQRModal() {
+  document.getElementById('qrModal').classList.add('open');
+}
+function closeQRModal() {
+  stopCamera();
+  document.getElementById('qrModal').classList.remove('open');
+  document.getElementById('scanStatus').textContent = 'Choose an option above to scan or upload a QR code.';
+  document.getElementById('scanStatus').className = 'scan-status';
+  document.getElementById('camera-feed').srcObject = null;
+  document.getElementById('camera-feed').style.display = 'none';
+  document.getElementById('fileDrop').style.display = 'none';
+}
+
+function startCamera() {
+  document.getElementById('camera-feed').style.display = 'block';
+  document.getElementById('fileDrop').style.display = 'none';
+  document.getElementById('scanStatus').textContent = 'Starting camera…';
+  document.getElementById('scanStatus').className = 'scan-status';
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(stream => {
+      cameraStream = stream;
+      const vid = document.getElementById('camera-feed');
+      vid.srcObject = stream;
+      vid.onloadedmetadata = () => {
+        vid.play();
+        document.getElementById('scanStatus').textContent = 'Scanning… point camera at QR code.';
+        startScanLoop();
+      };
+    })
+    .catch(() => showToast('Camera permission denied. Try uploading an image.','error'));
+}
+
+function stopCamera() {
+  clearInterval(scanInterval); scanInterval = null;
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream = null; }
+}
+
+function startScanLoop() {
+  const vid    = document.getElementById('camera-feed');
+  const canvas = document.getElementById('scan-canvas');
+  const ctx    = canvas.getContext('2d');
+  scanInterval = setInterval(() => {
+    if (vid.readyState !== vid.HAVE_ENOUGH_DATA) return;
+    canvas.width  = vid.videoWidth;
+    canvas.height = vid.videoHeight;
+    ctx.drawImage(vid, 0, 0);
+    const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+    if (code) {
+      clearInterval(scanInterval);
+      stopCamera();
+      handleScannedData(code.data);
+    }
+  }, 300);
+}
+
+function handleQRFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0,0,img.width,img.height);
+      const code = jsQR(data.data, data.width, data.height);
+      if (code) {
+        handleScannedData(code.data);
+      } else {
+        showToast('Could not detect a QR code in this image.','error');
+        document.getElementById('scanStatus').textContent = 'No QR code found. Try another image.';
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function handleScannedData(rawData) {
+  document.getElementById('scanStatus').textContent = '✅ QR scanned: ' + rawData;
+  document.getElementById('scanStatus').className = 'scan-status found';
+  const key = extractKey(rawData);
+  if (!key) { showToast('QR does not contain a valid MsgLink.','error'); return; }
+  closeQRModal();
+  doImport(key);
+}
+
+/* ═══════════════════════════════════════════
+   CLEAR CHAT
+═══════════════════════════════════════════ */
+function clearChat() {
+  document.getElementById('clearModal').classList.add('open');
+}
+function closeClearModal() {
+  document.getElementById('clearModal').classList.remove('open');
+}
+function confirmClear() {
+  messages = []; msgStore = {};
+  saveToStorage();
+  document.getElementById('qrCardContainer').innerHTML = '';
+  document.getElementById('qrEmpty').style.display = '';
+  renderMessages();
+  closeClearModal();
+  showToast('Conversation cleared.','info');
+}
+
+/* ═══════════════════════════════════════════
+   CLIPBOARD
+═══════════════════════════════════════════ */
+function copyText(txt, successMsg) {
+  navigator.clipboard.writeText(txt)
+    .then(() => showToast(successMsg || 'Copied!', 'success'))
+    .catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      ta.remove();
+      showToast(successMsg || 'Copied!', 'success');
+    });
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, type='info') {
+  const cont  = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  cont.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s ease forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+</script>
+</body>
+</html>
